@@ -12,8 +12,8 @@ import { FaChartLine, FaHistory, FaInfoCircle, FaExchangeAlt, FaCoins, FaWallet,
 const BORROW_ASSETS = {
   ethereum_testnet: [
     {
-      symbol: "STX",
-      name: "Stacks Coin",
+      symbol: "PC",
+      name: "Push Chain Coin",
       iconColor: "#F1324D",
       address: null // Native token
     }
@@ -22,9 +22,9 @@ const BORROW_ASSETS = {
 
 // Mock transaction history
 const MOCK_TRANSACTIONS = [
-  { type: 'deposit', token: 'STX', amount: '120.5', date: new Date(Date.now() - 86400000 * 2), status: 'completed' },
+  { type: 'deposit', token: 'PC', amount: '120.5', date: new Date(Date.now() - 86400000 * 2), status: 'completed' },
   { type: 'borrow', token: 'MNT', amount: '0.3', date: new Date(Date.now() - 86400000), status: 'completed' },
-  { type: 'swap', tokenFrom: 'MNT', tokenTo: 'STX', amountFrom: '0.2', amountTo: '98.32', date: new Date(), status: 'completed' }
+  { type: 'swap', tokenFrom: 'MNT', tokenTo: 'PC', amountFrom: '0.2', amountTo: '98.32', date: new Date(), status: 'completed' }
 ];
 
 export default function Bank() {
@@ -66,8 +66,8 @@ export default function Bank() {
       setChainId('ethereum_testnet'); // Ethereum testnet for development
       setAssets([
         {
-          symbol: "STX",
-          name: "Stacks Coin",
+          symbol: "PC",
+          name: "Push Chain Coin",
           iconColor: "#F1324D",
           address: "0x...",
           apr: "12.5%",
@@ -84,8 +84,8 @@ export default function Bank() {
           available: "$320,000"
         },
         {
-          symbol: "STX",
-          name: 'STX',
+          symbol: "PC",
+          name: 'PC',
           iconColor: "#2196F3",
           address: null,
           apr: "4.8%",
@@ -110,8 +110,8 @@ export default function Bank() {
         // Set mock lending market data for Ethereum testnet
         setAssets([
           {
-            symbol: "STX",
-            name: "Stacks Coin",
+            symbol: "PC",
+            name: "Push Chain Coin",
             iconColor: "#F1324D",
             address: "0x...",
             apr: "12.5%",
@@ -190,7 +190,7 @@ export default function Bank() {
         {showNetworkBanner && (
           <div className="bg-gradient-to-r from-red-magic/80 to-blue-magic/80 py-2 px-4 text-center relative mb-8 rounded-lg">
             <p className="text-white text-sm">
-              Connected to Stacks Testnet. 
+              Connected to Push Chain Donut Testnet. 
               <button className="underline ml-2">Switch Network</button>
             </p>
             <button 
@@ -247,8 +247,8 @@ export default function Bank() {
                 <div className="bg-gradient-to-r p-[1px] from-red-magic to-blue-magic rounded-xl">
                   {/* Ethereum Testnet Only - No Uniswap Integration */}
         <div className="bg-gray-800 rounded-lg p-6 text-center">
-          <h3 className="text-xl font-semibold text-white mb-2">Stacks Testnet Only</h3>
-          <p className="text-gray-400">This application works exclusively with Stacks Testnet</p>
+          <h3 className="text-xl font-semibold text-white mb-2">Push Chain Donut Testnet Only</h3>
+          <p className="text-gray-400">This application works exclusively with Push Chain Donut Testnet</p>
         </div>
                 </div>
               </div>
@@ -264,7 +264,7 @@ export default function Bank() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="bg-[#250020] p-4 rounded-lg hover:bg-[#350030] transition-colors">
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-white/70 text-sm">STX Price</span>
+                        <span className="text-white/70 text-sm">PC Price</span>
                         <div className="flex items-center">
                           <div className="h-2 w-16 bg-[#120010] rounded-full overflow-hidden">
                             <div 
@@ -413,7 +413,7 @@ export default function Bank() {
               </p>
               <ul className="space-y-2 mb-4">
                 <li className="flex justify-between">
-                  <span className="text-white/60">STX</span>
+                  <span className="text-white/60">PC</span>
                   <span className="text-green-500">12.5% APY</span>
                 </li>
                 <li className="flex justify-between">

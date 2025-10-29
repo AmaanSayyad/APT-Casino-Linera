@@ -1,15 +1,18 @@
 "use client";
 import { useEffect, useRef } from 'react';
-import { useAccount, useConnect } from 'wagmi';
+import { usePushWalletContext, usePushChainClient, PushUI } from '@pushchain/ui-kit';
 import { memoryWalletStorage as walletStorage } from '@/utils/memoryWalletStorage';
 
 /**
  * Global Wallet Persistence Hook
- * Works across all pages and components
+ * Works across all pages and components with Push Universal Wallet
  */
 export const useGlobalWalletPersistence = () => {
-  const { isConnected, address } = useAccount();
-  const { connect, connectors } = useConnect();
+  const { connectionStatus } = usePushWalletContext();
+  const { pushChainClient } = usePushChainClient();
+  
+  const isConnected = connectionStatus === PushUI.CONSTANTS.CONNECTION.STATUS.CONNECTED;
+  const address = pushChainClient?.universal?.account || null;
   const reconnectAttempted = useRef(false);
   const reconnectTimeout = useRef(null);
   const lastPageCheck = useRef(0);
@@ -23,16 +26,15 @@ export const useGlobalWalletPersistence = () => {
     // Check if we need to reconnect
     const checkAndReconnect = () => {
       // Use safe storage utility
-      const { wasConnected, address: savedAddress, connector: lastConnector } = walletStorage.getConnectionState();
+      const { wasConnected, address: savedAddress } = walletStorage.getConnectionState();
       const currentTime = Date.now();
       
-      console.log('🌐 Global wallet check:', {
+      console.log('🌐 Push Universal Wallet check:', {
         wasConnected,
-        lastConnector,
         savedAddress,
         isConnected,
         address,
-        connectorsCount: connectors.length,
+        connectionStatus,
         reconnectAttempted: reconnectAttempted.current,
         timeSinceLastCheck: currentTime - lastPageCheck.current,
         windowDefined: typeof window !== 'undefined',
@@ -42,68 +44,26 @@ export const useGlobalWalletPersistence = () => {
       // Update last check time
       lastPageCheck.current = currentTime;
 
-      // More aggressive reconnection for Vercel
-      // Only attempt reconnection if:
-      // 1. Wallet was previously connected OR we have a saved address
-      // 2. Currently not connected
-      // 3. Haven't attempted reconnection in the last 2 seconds (very short for Vercel)
-      // 4. Connectors are available
-      // 5. Window is defined (client-side)
+      // Push Universal Wallet handles reconnection automatically
+      // We just need to track the state
       const lastReconnectAttempt = walletStorage.getLastReconnectAttempt();
       const timeSinceLastAttempt = currentTime - lastReconnectAttempt;
-      const cooldown = process.env.NODE_ENV === 'production' ? 2000 : 5000; // 2s for Vercel, 5s for local
+      const cooldown = process.env.NODE_ENV === 'production' ? 2000 : 5000;
       const canAttemptReconnect = timeSinceLastAttempt > cooldown;
       
-      // More permissive condition for Vercel
-      const shouldAttemptReconnect = (wasConnected || savedAddress) && !isConnected && canAttemptReconnect && connectors.length > 0 && typeof window !== 'undefined';
-      
-      if (shouldAttemptReconnect) {
-        console.log('🔄 Global wallet persistence: Attempting reconnection...');
+      if ((wasConnected || savedAddress) && !isConnected && canAttemptReconnect && typeof window !== 'undefined') {
+        console.log('🔄 Push Universal Wallet: Checking connection status...');
         reconnectAttempted.current = true;
         walletStorage.setLastReconnectAttempt(currentTime);
-
-        // Find the appropriate connector
-        let targetConnector = null;
         
-        if (lastConnector) {
-          targetConnector = connectors.find(c => 
-            c.id === lastConnector || 
-            c.name.toLowerCase().includes(lastConnector.toLowerCase())
-          );
-        }
-        
-        // Fallback to MetaMask or injected
-        if (!targetConnector) {
-          targetConnector = connectors.find(c => 
-            c.id === 'metaMask' || 
-            c.name.toLowerCase().includes('metamask') ||
-            c.id === 'injected'
-          );
-        }
-        
-        // Last resort: use first available connector
-        if (!targetConnector && connectors.length > 0) {
-          targetConnector = connectors[0];
-        }
-
-        if (targetConnector) {
-          console.log('🔗 Reconnecting with connector:', targetConnector.name);
-          connect({ connector: targetConnector })
-            .then(() => {
-              console.log('✅ Global wallet reconnection successful');
-              // Don't reset reconnectAttempted here, let it reset naturally
-            })
-            .catch((error) => {
-              console.error('❌ Global wallet reconnection failed:', error);
-              // Reset after a delay to allow retry
-              setTimeout(() => {
-                reconnectAttempted.current = false;
-              }, 10000); // 10 seconds delay before allowing retry
-            });
-        } else {
-          console.log('❌ No suitable connector found for reconnection');
-          reconnectAttempted.current = false;
-        }
+        // Push Universal Wallet handles reconnection internally
+        // We just monitor the status
+        setTimeout(() => {
+          if (!isConnected) {
+            console.log('❌ Push Universal Wallet reconnection timeout');
+            reconnectAttempted.current = false;
+          }
+        }, 5000);
       }
     };
 
@@ -117,33 +77,24 @@ export const useGlobalWalletPersistence = () => {
         clearTimeout(reconnectTimeout.current);
       }
     };
-  }, [isConnected, address, connect, connectors]);
+  }, [isConnected, address, connectionStatus]);
 
   // Save connection state when wallet connects
   useEffect(() => {
     if (isConnected && address && typeof window !== 'undefined') {
-      console.log('✅ Global wallet connected, saving state');
-      
-      // Find and save connector info
-      const currentConnector = connectors.find(c => 
-        c.id === 'metaMask' || 
-        c.name.toLowerCase().includes('metamask') ||
-        c.id === 'injected'
-      );
-      
-      const connectorId = currentConnector?.id || 'unknown';
+      console.log('✅ Push Universal Wallet connected, saving state');
       
       // Use safe storage utility
-      const success = walletStorage.saveConnectionState(address, connectorId);
+      const success = walletStorage.saveConnectionState(address, 'push-universal-wallet');
       
       if (success) {
-        console.log('💾 Saved connector:', connectorId);
+        console.log('💾 Saved Push Universal Wallet connection');
         // Reset reconnection flag and clear last attempt time
         reconnectAttempted.current = false;
         walletStorage.clearLastReconnectAttempt();
       }
     }
-  }, [isConnected, address, connectors]);
+  }, [isConnected, address]);
 
   // Clear connection state when wallet disconnects
   useEffect(() => {

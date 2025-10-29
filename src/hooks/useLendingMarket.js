@@ -5,15 +5,15 @@ import { useState, useEffect } from 'react';
 const MOCK_LENDING_DATA = {
   userDeposits: [
     {
-      symbol: 'STX',
-      name: 'Stacks Coin',
+      symbol: 'PC',
+      name: 'Monad Network Coin',
       amount: '25.5',
       apy: '8.2',
       iconColor: '#F1324D'
     },
     {
-      symbol: 'STX',
-      name: 'STX Casino Token',
+      symbol: 'PC',
+      name: 'MON Casino Token',
       amount: '500.0',
       apy: '12.5',
       iconColor: '#34C759'
@@ -21,8 +21,8 @@ const MOCK_LENDING_DATA = {
   ],
   userBorrows: [
     {
-      symbol: 'STX',
-      name: 'Stacks Coin',
+      symbol: 'PC',
+      name: 'Monad Network Coin',
       amount: '5.0',
       apy: '15.2',
       iconColor: '#F1324D'

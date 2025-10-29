@@ -18,7 +18,6 @@ import { HiLightningBolt, HiOutlineTrendingUp, HiOutlineChartBar } from "react-i
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import useWalletStatus from '@/hooks/useWalletStatus';
-import { saveGameResult } from '@/utils/gameHistory';
 import EthereumConnectWalletButton from '@/components/EthereumConnectWalletButton';
 import Image from "next/image";
 import "./mines.css";
@@ -113,7 +112,7 @@ export default function Mines() {
   const handleFormSubmit = async (formData) => {
     try {
       console.log('🔮 PYTH ENTROPY: Initializing Mines game session...');
-      console.log('🔗 Network: Stacks | Token: STX | Protocol: Pyth Entropy');
+      console.log('🔗 Network: Push Chain | Token: PC | Protocol: Pyth Entropy');
       
       // Initialize Pyth Entropy
       console.log('🔮 PYTH ENTROPY: Initializing...');
@@ -121,7 +120,7 @@ export default function Mines() {
       console.log('✅ PYTH ENTROPY: Initialized successfully');
       
       console.log('✅ PYTH ENTROPY: Mines game session created successfully');
-      console.log(`🎮 Game Config: ${formData.mines || 3} mines | ${formData.betAmount || '0.01'} STX bet`);
+      console.log(`🎮 Game Config: ${formData.mines || 3} mines | ${formData.betAmount || '0.01'} PC bet`);
       
     } catch (error) {
       console.error('❌ PYTH ENTROPY: Connection failed:', error);
@@ -216,6 +215,71 @@ export default function Mines() {
       };
       
       console.log('✅ PYTH ENTROPY: Mines randomness generated:', entropyProof);
+      
+      // Log game result to Push Chain
+      try {
+        const pushResponse = await fetch('/api/log-to-push', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            gameType: 'MINES',
+            gameResult: {
+              mines: result.mines || 0,
+              won: result.won || false,
+              multiplier: result.multiplier || 0
+            },
+            playerAddress: 'unknown', // Will be updated when wallet integration is available
+            betAmount: result.betAmount || 0,
+            payout: result.payout || 0,
+            entropyProof: entropyProof
+          })
+        });
+        
+        const pushResult = await pushResponse.json();
+        console.log('🔗 Push Chain logging result (Mines):', pushResult);
+        
+        if (pushResult.success) {
+          entropyProof.pushChainTxHash = pushResult.transactionHash;
+          entropyProof.pushChainExplorerUrl = pushResult.pushChainExplorerUrl;
+        }
+      } catch (error) {
+        console.error('❌ Push Chain logging failed (Mines):', error);
+      }
+
+      // Log game result to Solana
+      try {
+        const solanaResponse = await fetch('/api/log-to-solana', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            gameType: 'MINES',
+            gameResult: {
+              mines: result.mines,
+              outcome: result.won ? 'win' : 'loss',
+              multiplier: result.multiplier,
+              payout: result.payout
+            },
+            playerAddress: 'unknown', // Will be updated when wallet integration is available
+            betAmount: result.betAmount || 0,
+            payout: result.payout || 0,
+            entropyProof: entropyProof
+          })
+        });
+        
+        const solanaResult = await solanaResponse.json();
+        console.log('🔗 Solana logging result (Mines):', solanaResult);
+        
+        if (solanaResult.success) {
+          entropyProof.solanaTxSignature = solanaResult.transactionSignature;
+          entropyProof.solanaExplorerUrl = solanaResult.solanaExplorerUrl;
+        }
+      } catch (error) {
+        console.error('❌ Solana logging failed (Mines):', error);
+      }
     } catch (error) {
       console.error('❌ Error using Pyth Entropy for Mines game:', error);
     }
@@ -223,46 +287,13 @@ export default function Mines() {
     const newHistoryItem = {
       id: Date.now(),
       mines: result.mines || 0,
-      bet: `${result.betAmount || '0.00000'} STX`,
+      bet: `${result.betAmount || '0.00000'} PC`,
       outcome: result.won ? 'win' : 'loss',
-      payout: result.won ? `${result.payout || '0.00000'} STX` : '0.00000 STX',
+      payout: result.won ? `${result.payout || '0.00000'} PC` : '0.00000 PC',
       multiplier: result.won ? `${result.multiplier || '0.00'}x` : '0.00x',
       time: 'Just now',
       entropyProof: entropyProof
     };
-    
-    // Save game result with Stacks logging
-    saveGameResult({
-      vrfRequestId: result.entropyProof?.requestId || 'mines_' + Date.now(),
-      userAddress: address || 'anonymous',
-      gameType: 'MINES',
-      gameConfig: { mineCount: result.mines || 0, gridSize: '5x5' },
-      resultData: {
-        revealedTiles: result.tilesRevealed || 0,
-        hitMine: !result.won,
-        multiplier: result.multiplier || 0
-      },
-      betAmount: result.betAmount || 0,
-      payoutAmount: result.won ? (result.payout || 0) : 0,
-      entropyProof: result.entropyProof
-    }).then(saveResult => {
-      // Add Stacks transaction info to the history item
-      if (saveResult?.stacksLogResult?.txId) {
-        newHistoryItem.stacksTxId = saveResult.stacksLogResult.txId;
-        newHistoryItem.stacksExplorerUrl = saveResult.stacksLogResult.stacksExplorerUrl;
-        
-        // Update the game history with Stacks info
-        setGameHistory(prev => {
-          const updatedHistory = [...prev];
-          if (updatedHistory.length > 0) {
-            updatedHistory[0] = { ...updatedHistory[0], ...newHistoryItem };
-          }
-          return updatedHistory;
-        });
-      }
-    }).catch(saveError => {
-      console.warn('⚠️ Failed to save mines game result:', saveError);
-    });
     
     setGameHistory(prev => [newHistoryItem, ...prev].slice(0, 50));
     
@@ -275,7 +306,7 @@ export default function Mines() {
           sessionId: result.entropyProof?.requestId || `mines_${Date.now()}`,
           gameType: 'MINES',
           requestId: result.entropyProof?.requestId || `mines_request_${Date.now()}`,
-          valueOg: 0,
+          valueMon: 0,
           entropyProof: result.entropyProof
         })
       }).catch(() => {});
@@ -526,7 +557,7 @@ export default function Mines() {
                   <div className="relative w-full bg-black rounded-lg overflow-hidden shadow-lg shadow-purple-900/30 border border-purple-600/20" style={{ paddingTop: "56.25%" }}>
                     <iframe 
                       className="absolute top-0 left-0 w-full h-full"
-                      src="https://www.youtube.com/embed/Aqz5C7GPrvQ?si=9F38e0aJvMv1K2PO" 
+                      src="https://www.youtube.com/embed/SJNWidJKOeA?si=SfKVKLsO_UyfGi5h" 
                       title="YouTube video player" 
                       frameBorder="0" 
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 

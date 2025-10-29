@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAccount } from 'wagmi';
+import { usePushWalletContext, usePushChainClient, PushUI } from '@pushchain/ui-kit';
 import { ethers } from 'ethers';
 import { ExternalLink, Hash, CheckCircle, AlertCircle } from 'lucide-react';
 import { useGameHistory } from '../../hooks/useGameHistory';
@@ -12,7 +12,10 @@ import GameHistoryTable from './GameHistoryTable';
  * Shows how to integrate VRF results with game history
  */
 const RouletteWithHistory = () => {
-  const { address, isConnected } = useAccount();
+  const { connectionStatus } = usePushWalletContext();
+  const { pushChainClient } = usePushChainClient();
+  const isConnected = connectionStatus === PushUI.CONSTANTS.CONNECTION.STATUS.CONNECTED;
+  const address = pushChainClient?.universal?.account || null;
   const { saveRouletteGame, saving } = useGameHistory();
   const {
     isReady: vrfReady,
@@ -33,7 +36,7 @@ const RouletteWithHistory = () => {
   const [betConfig, setBetConfig] = useState({
     betType: 'straight',
     betValue: 7,
-    betAmount: ethers.parseEther('0.01') // 0.01 STX
+    betAmount: ethers.parseEther('0.01') // 0.01 MON
   });
 
   // Initialize roulette processor
@@ -303,8 +306,8 @@ const RouletteWithHistory = () => {
               {gameState.result.isWin ? '🎉 YOU WIN!' : '😔 YOU LOSE'}
             </div>
             <div className="text-sm text-gray-600">
-              Bet: {ethers.formatEther(betConfig.betAmount)} STX →
-              Payout: {ethers.formatEther(gameState.result.payoutResult.payout.toString())} STX
+              Bet: {ethers.formatEther(betConfig.betAmount)} MON →
+              Payout: {ethers.formatEther(gameState.result.payoutResult.payout.toString())} MON
             </div>
             <div className={`font-medium ${gameState.result.isWin ? 'text-green-600' : 'text-red-600'
               }`}>
@@ -337,7 +340,7 @@ const RouletteWithHistory = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:text-blue-800"
-                  title="View on Arbiscan"
+                  title="View on Monad Explorer"
                 >
                   <ExternalLink size={14} />
                 </a>

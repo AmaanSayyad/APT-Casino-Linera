@@ -5,16 +5,21 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
+import { usePushWalletContext, usePushChainClient, PushUI } from '@pushchain/ui-kit';
 import { useSelector, useDispatch } from 'react-redux';
 import { setBalance, setLoading, loadBalanceFromStorage } from '@/store/balanceSlice';
-import { useStacksWallet } from '@/contexts/StacksWalletContext';
-import StacksWalletButton from "./StacksWalletButton";
+import { useSmartAccount } from '@/hooks/useSmartAccount';
+import { formatSmartAccountAddress } from '@/utils/smartAccountUtils';
+import EthereumConnectWalletButton from "./EthereumConnectWalletButton";
 import WithdrawModal from "./WithdrawModal";
 import LiveChat from "./LiveChat";
+import SmartAccountInfo from "./SmartAccountInfo";
+import SmartAccountModal from "./SmartAccountModal";
+import { useGlobalWalletPersistence } from '../hooks/useGlobalWalletPersistence';
 
 
 import { useNotification } from './NotificationSystem';
-import { casinoWallet } from '@/utils/casinoWallet';
+import { TREASURY_CONFIG } from '../config/treasury';
 // Enhanced UserBalanceSystem with deposit functionality
 const UserBalanceSystem = {
   getBalance: async (address) => {
@@ -73,7 +78,7 @@ const ethereumClient = {
   }
 };
 
-const CASINO_MODULE_ADDRESS = "0x1234567890123456789012345678901234567890123456789012345678901234";
+const CASINO_MODULE_ADDRESS = process.env.NEXT_PUBLIC_CASINO_MODULE_ADDRESS || "0x0000000000000000000000000000000000000000";
 
 // Mock search results for demo purposes
 const MOCK_SEARCH_RESULTS = {
@@ -84,8 +89,8 @@ const MOCK_SEARCH_RESULTS = {
     { id: 'game4', name: 'Plinko', path: '/game/plinko', type: 'Popular' },
   ],
   tournaments: [
-    { id: 'tournament1', name: 'High Roller Tournament', path: '/tournaments/high-roller', prize: '10,000 STX' },
-    { id: 'tournament2', name: 'Weekend Battle', path: '/tournaments/weekend-battle', prize: '5,000 STX' },
+    { id: 'tournament1', name: 'High Roller Tournament', path: '/tournaments/high-roller', prize: '10,000 PC' },
+    { id: 'tournament2', name: 'Weekend Battle', path: '/tournaments/weekend-battle', prize: '5,000 PC' },
   ],
   pages: [
     { id: 'page1', name: 'Bank', path: '/bank', description: 'Deposit and withdraw funds' },
@@ -112,10 +117,11 @@ export default function Navbar() {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const dispatch = useDispatch();
   const { userBalance, isLoading: isLoadingBalance } = useSelector((state) => state.balance);
-  // Stacks network name from environment
+  const [walletNetworkName, setWalletNetworkName] = useState("");
 
   // User balance management
   const [showBalanceModal, setShowBalanceModal] = useState(false);
+  const [showSmartAccountModal, setShowSmartAccountModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("0");
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
@@ -123,32 +129,51 @@ export default function Navbar() {
   const [showLiveChat, setShowLiveChat] = useState(false);
 
 
-  // Stacks wallet connection
-  const { isConnected, address, balance: stacksBalance, getBalance, userSession } = useStacksWallet();
+  // Push Universal Wallet connection
+  const { connectionStatus } = usePushWalletContext();
+  const { pushChainClient } = usePushChainClient();
+  const isConnected = connectionStatus === PushUI.CONSTANTS.CONNECTION.STATUS.CONNECTED;
+  const address = pushChainClient?.universal?.account || null;
   const isWalletReady = isConnected && address;
+  
+  // Smart Account hook
+  const { 
+    isSmartAccount, 
+    smartAccountInfo, 
+    capabilities, 
+    hasSmartAccountSupport,
+    supportedFeatures 
+  } = useSmartAccount();
+  
+  // Use global wallet persistence hook
+  useGlobalWalletPersistence();
 
-  // Debug wallet connection
+  // Debug Push Universal Wallet connection
   useEffect(() => {
-    console.log('🔗 Stacks Wallet connection state:', { 
+    console.log('🔗 Push Universal Wallet connection state:', { 
+      connectionStatus,
       isConnected, 
-      address,
+      address, 
+      pushChainClient: !!pushChainClient,
       isWalletReady 
     });
     
     // Check if wallet is connected but address is not yet available
     if (isConnected && !address) {
-      console.log('⚠️ Wallet connected but address not yet available, waiting...');
+      console.log('⚠️ Push Universal Wallet connected but address not yet available, waiting...');
       // Add a small delay to see if address becomes available
       const timer = setTimeout(() => {
-        console.log('⏰ After delay - Wallet state:', { 
+        console.log('⏰ After delay - Push Universal Wallet state:', { 
+          connectionStatus,
           isConnected, 
-          address,
+          address, 
+          pushChainClient: !!pushChainClient,
           isWalletReady 
         });
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [isConnected, address, isWalletReady]);
+  }, [connectionStatus, isConnected, address, pushChainClient, isWalletReady]);
 
 
   // Mock notifications for UI purposes
@@ -156,7 +181,7 @@ export default function Navbar() {
     {
       id: '1',
       title: 'Balance Updated',
-      message: 'Your STX balance has been updated',
+      message: 'Your PC balance has been updated',
       isRead: false,
       time: '2 min ago'
     },
@@ -327,25 +352,44 @@ export default function Navbar() {
     dispatch(setLoading(false));
   };
 
-  // Handle withdraw from house account (Stacks)
+  // Handle withdraw from house account
   const handleWithdraw = async () => {
     if (!isConnected || !address) {
-      notification.error('Please connect your Stacks wallet first');
+      notification.error('Please connect your wallet first');
       return;
     }
 
     try {
       setIsWithdrawing(true);
-      const balanceInStx = parseFloat(userBalance || '0');
-      if (balanceInStx <= 0) {
+      const balanceInMon = parseFloat(userBalance || '0');
+      if (balanceInMon <= 0) {
         notification.error('No balance to withdraw');
         return;
       }
 
-      // Process withdrawal through casino wallet
-      console.log('🔍 Stacks withdrawal for:', { address, amount: balanceInStx });
+      // Call backend API to process withdrawal from treasury
+      console.log('🔍 Account object:', address);
+      console.log('🔍 Account address:', address);
+      console.log('🔍 Account address type:', typeof address);
       
-      const result = await casinoWallet.processWithdrawal(address, balanceInStx);
+      const response = await fetch('/api/withdraw', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userAddress: address,
+          amount: balanceInMon
+        })
+      });
+
+      const result = await response.json();
+      console.log('🔍 Withdraw API response:', result);
+
+      if (!response.ok) {
+        const errorMessage = result?.error || 'Withdrawal failed';
+        throw new Error(errorMessage);
+      }
 
       // Update user balance to 0 after successful withdrawal
       dispatch(setBalance('0'));
@@ -354,19 +398,16 @@ export default function Navbar() {
       localStorage.setItem('userBalance', '0');
       
       // Check if transaction hash exists before using it
-      const txHash = result?.txId || 'Unknown';
+      const txHash = result?.transactionHash || 'Unknown';
       const txDisplay = txHash !== 'Unknown' ? `${txHash.slice(0, 8)}...` : 'Pending';
       
-      notification.success(`Withdrawal transaction sent! ${balanceInStx.toFixed(2)} STX will be transferred. TX: ${txDisplay}`);
+      notification.success(`Withdrawal transaction sent! ${balanceInMon.toFixed(5)} PC will be transferred. TX: ${txDisplay}`);
       
       // Close the modal
       setShowBalanceModal(false);
       
-      // Refresh wallet balance
-      await getBalance();
-      
     } catch (error) {
-      console.error('Stacks withdraw error:', error);
+      console.error('Withdraw error:', error);
       
       // Ensure error message is a string
       const errorMessage = error?.message || 'Unknown error occurred';
@@ -378,7 +419,7 @@ export default function Navbar() {
     }
   };
 
-  // Handle deposit to house balance (Stacks)
+  // Handle deposit to house balance
   const handleDeposit = async () => {
     // Prevent multiple simultaneous deposits
     if (isDepositing) {
@@ -387,13 +428,7 @@ export default function Navbar() {
     }
     
     if (!isConnected || !address) {
-      notification.error('Please connect your Stacks wallet first');
-      return;
-    }
-    
-    // Additional wallet validation
-    if (!userSession || !userSession.isUserSignedIn()) {
-      notification.error('Wallet session expired. Please reconnect your wallet.');
+      notification.error('Please connect your wallet first');
       return;
     }
 
@@ -403,151 +438,156 @@ export default function Navbar() {
       return;
     }
     
-    // Validate amount limits
-    if (amount < 0.001) {
-      notification.error('Minimum deposit amount is 0.001 STX');
+    // Check deposit limits
+    if (amount < TREASURY_CONFIG.LIMITS.MIN_DEPOSIT) {
+      notification.error(`Minimum deposit amount is ${TREASURY_CONFIG.LIMITS.MIN_DEPOSIT} PC`);
       return;
     }
     
-    if (amount > 1000) {
-      notification.error('Maximum deposit amount is 1000 STX');
+    if (amount > TREASURY_CONFIG.LIMITS.MAX_DEPOSIT) {
+      notification.error(`Maximum deposit amount is ${TREASURY_CONFIG.LIMITS.MAX_DEPOSIT} PC`);
       return;
     }
-    
-    // Balance check will be handled by the wallet during transaction
 
     setIsDepositing(true);
-    console.log('🚀 Starting Stacks deposit process for:', amount, 'STX');
-    
+    console.log('🚀 Starting deposit process for:', amount, 'PC');
     try {
-      // Use Stacks Connect for transaction
-      // Use testnet treasury address from environment
-      const TREASURY_ADDRESS = process.env.NEXT_PUBLIC_CASINO_TREASURY_ADDRESS || 'STZ2YCW72SDSCVYQKEPC3PNQ7J69EFTFERHEPC9';
+      console.log('Depositing to house balance:', { address: address, amount });
       
-      const amountInMicroSTX = Math.floor(amount * 1000000);
-
-      // Check if user session exists
-      if (!userSession || !userSession.isUserSignedIn()) {
-        notification.error('Please reconnect your wallet');
-        setIsDepositing(false);
-        return;
+      // Check if MetaMask is available
+      if (!window.ethereum) {
+        throw new Error('MetaMask is not installed');
       }
-
-      // Enhanced STX transfer with proper validation and fallback
-      const { openSTXTransfer, showConnect } = await import('@stacks/connect');
       
-      console.log('🔍 Starting STX transfer with details:', {
-        recipient: TREASURY_ADDRESS,
-        amount: amountInMicroSTX,
-        memo: 'Casino Deposit',
-        userAddress: address,
-        userBalance: stacksBalance
+      // Request account access if not already connected
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const userAccount = accounts[0];
+      
+      // Check if user is on Monad Testnet network
+      const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+      const expectedChainId = TREASURY_CONFIG.NETWORK.CHAIN_ID;
+      
+      console.log('🔍 Current chain ID:', chainId);
+      console.log('🔍 Expected chain ID:', expectedChainId);
+      
+      if (chainId !== expectedChainId) {
+        console.log('🔄 Need to switch network...');
+        // Try to switch to Monad Testnet
+        try {
+          console.log('🔄 Attempting to switch to Push Chain Testnet...');
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: expectedChainId }],
+          });
+          console.log('✅ Successfully switched to Push Chain Testnet');
+        } catch (switchError) {
+          console.log('⚠️ Switch error:', switchError);
+          // If Monad Testnet is not added, add it
+          if (switchError.code === 4902) {
+            console.log('🔧 Network not found, adding Push Chain Testnet...');
+            try {
+              await window.ethereum.request({
+                method: 'wallet_addEthereumChain',
+                params: [{
+                  chainId: expectedChainId,
+                  chainName: TREASURY_CONFIG.NETWORK.CHAIN_NAME,
+                  nativeCurrency: {
+                    name: 'PC',
+                    symbol: 'PC',
+                    decimals: 18
+                  },
+                  rpcUrls: [TREASURY_CONFIG.NETWORK.RPC_URL],
+                  blockExplorerUrls: [TREASURY_CONFIG.NETWORK.EXPLORER_URL]
+                }]
+              });
+              console.log('✅ Successfully added Push Chain Testnet network');
+              
+              // Try to switch again after adding
+              await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: expectedChainId }],
+              });
+              console.log('✅ Successfully switched to Push Chain Testnet after adding');
+            } catch (addError) {
+              console.error('❌ Failed to add network:', addError);
+              throw new Error(`Failed to add Push Chain Testnet network: ${addError.message}`);
+            }
+          } else {
+            console.error('❌ Switch error:', switchError);
+            throw new Error(`Please switch to ${TREASURY_CONFIG.NETWORK.CHAIN_NAME} network. Error: ${switchError.message}`);
+          }
+        }
+      } else {
+        console.log('✅ Already on correct network');
+      }
+      
+      // Casino treasury address from config
+      const TREASURY_ADDRESS = TREASURY_CONFIG.ADDRESS;
+      
+      // Convert amount to Wei (18 decimals)
+      const amountWei = (amount * 10**18).toString();
+      
+      // Send transaction to treasury
+      const transactionParameters = {
+        to: TREASURY_ADDRESS,
+        from: userAccount,
+        value: '0x' + parseInt(amountWei).toString(16), // Convert to hex
+        gas: TREASURY_CONFIG.GAS.DEPOSIT_LIMIT, // Gas limit from config
+      };
+      
+      console.log('Sending transaction to MetaMask:', transactionParameters);
+      
+      // Request transaction from MetaMask
+      const txHash = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [transactionParameters],
       });
       
-      // Comprehensive validation
-      if (!TREASURY_ADDRESS || TREASURY_ADDRESS.length < 20) {
-        throw new Error('Invalid treasury address');
-      }
+      console.log('Transaction sent:', txHash);
       
-      if (amountInMicroSTX <= 0) {
-        throw new Error('Amount must be greater than 0');
-      }
+      // Wait for transaction confirmation
+      notification.info(`Transaction sent! Hash: ${txHash.slice(0, 10)}...`);
       
-      // Check if user has enough balance (including fee)
-      const requiredBalance = (amountInMicroSTX + 1000) / 1000000; // Add 0.001 STX for fee
-      if (stacksBalance < requiredBalance) {
-        throw new Error(`Insufficient balance. Required: ${requiredBalance.toFixed(6)} STX, Available: ${stacksBalance.toFixed(6)} STX`);
-      }
+      // Wait for confirmation (you can implement proper confirmation checking here)
+      await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds
       
-      // Try openSTXTransfer first, with fallback to showConnect
+      // After successful transaction, update local balance
+      const currentBalance = parseFloat(userBalance || '0');
+      const newBalance = (currentBalance + amount).toString();
+      
+      console.log('🔄 Balance update before dispatch:', { currentBalance, amount, newBalance });
+      
+      // Update Redux store immediately (this will also update localStorage)
+      dispatch(setBalance(newBalance));
+      
+      console.log('✅ Balance updated in Redux store');
+      
+      // Call deposit API to record the transaction (optional - for logging purposes only)
       try {
-        console.log('🚀 Attempting openSTXTransfer...');
-        
-        openSTXTransfer({
-          recipient: TREASURY_ADDRESS,
-          amount: amountInMicroSTX.toString(),
-          memo: 'Casino Deposit',
-          network: 'testnet',
-          postConditions: [],
-          fee: 1000,
-          appDetails: {
-            name: 'APT Casino',
-            icon: window.location.origin + '/favicon.ico'
-          },
-          onFinish: async (data) => {
-          console.log('Transaction sent:', data.txId);
-          
-          try {
-            // Process deposit through casino wallet
-            await casinoWallet.processDeposit(address, amount, data.txId);
-            
-            // Update local balance
-            const currentBalance = parseFloat(userBalance || '0');
-            const newBalance = (currentBalance + amount).toString();
-            
-            dispatch(setBalance(newBalance));
-            localStorage.setItem('userBalance', newBalance);
-            
-            notification.success(`Successfully deposited ${amount} STX! TX: ${data.txId.slice(0, 10)}...`);
-            setDepositAmount("");
-            
-            // Refresh wallet balance
-            await getBalance();
-          } catch (error) {
-            console.error('Failed to process deposit:', error);
-            notification.error('Deposit transaction sent but failed to update balance');
-          } finally {
-            setIsDepositing(false);
-          }
-        },
-          onCancel: () => {
-            console.log('Transaction cancelled');
-            notification.info('Deposit cancelled');
-            setIsDepositing(false);
-          }
-        });
-        
-      } catch (openSTXError) {
-        console.error('❌ openSTXTransfer failed:', openSTXError);
-        console.log('🔄 Trying alternative method with showConnect...');
-        
-        // Fallback to showConnect method
-        try {
-          await showConnect({
-            appDetails: {
-              name: 'APT Casino',
-              icon: window.location.origin + '/favicon.ico',
-            },
-            redirectTo: '/',
-            onFinish: () => {
-              // After connection, try the transaction again
-              setTimeout(() => {
-                notification.info('Wallet connected. Please try the deposit again.');
-                setIsDepositing(false);
-              }, 1000);
-            },
-            onCancel: () => {
-              notification.info('Connection cancelled');
-              setIsDepositing(false);
-            },
-          });
-        } catch (connectError) {
-          console.error('❌ showConnect also failed:', connectError);
-          notification.error(`Deposit failed: ${connectError.message}`);
-          setIsDepositing(false);
+        if (address) {
+          const result = await UserBalanceSystem.deposit(address, amount, txHash);
+          console.log('✅ Deposit recorded in API:', result);
+        } else {
+          console.warn('Account address not available for API call');
         }
+        
+      } catch (apiError) {
+        console.warn('⚠️ Could not record deposit in API:', apiError);
+        // Don't fail the deposit if API call fails - balance is already updated
       }
+      
+      notification.success(`Successfully deposited ${amount} PC to casino treasury! TX: ${txHash.slice(0, 10)}...`);
+      
+      setDepositAmount("");
+      
+      
       
     } catch (error) {
-      console.error('Stacks deposit error:', error);
+      console.error('Deposit error:', error);
       notification.error(`Deposit failed: ${error.message}`);
+    } finally {
       setIsDepositing(false);
     }
-    
-    // Fallback timeout to reset loading state
-    setTimeout(() => {
-      setIsDepositing(false);
-    }, 5000);
   };
 
   // Handle search input
@@ -639,7 +679,26 @@ export default function Navbar() {
 
   // Pyth Entropy handles randomness generation
 
-  // Stacks network is configured in environment variables
+  // Detect Ethereum wallet network (best-effort)
+  useEffect(() => {
+    const readNetwork = async () => {
+      try {
+        if (typeof window !== 'undefined' && window.ethereum?.network) {
+          const n = await window.ethereum.network();
+          if (n?.name) setWalletNetworkName(String(n.name).toLowerCase());
+        }
+      } catch {}
+    };
+    readNetwork();
+    const off = window?.ethereum?.onNetworkChange?.((n) => {
+      try { setWalletNetworkName(String(n?.name || '').toLowerCase()); } catch {}
+    });
+    return () => {
+      try { off && off(); } catch {}
+    };
+  }, []);
+
+      // switchToTestnet function removed
 
   return (
     <>
@@ -937,7 +996,7 @@ export default function Navbar() {
                   <div className="flex items-center space-x-2">
                     <span className="text-xs text-gray-300">Balance:</span>
                     <span className="text-sm text-green-300 font-medium">
-                      {isLoadingBalance ? 'Loading...' : `${parseFloat(userBalance || '0').toFixed(5)} STX`}
+                      {isLoadingBalance ? 'Loading...' : `${parseFloat(userBalance || '0').toFixed(5)} PC`}
                     </span>
                     <button
                       onClick={() => setShowBalanceModal(true)}
@@ -950,14 +1009,31 @@ export default function Navbar() {
               </div>
             )}
             
-            {/* Pyth Entropy Status */}
+            {/* Smart Account Status */}
             {isConnected && (
-              <div className="px-3 py-2 bg-gradient-to-r from-blue-500/20 to-purple-600/20 border border-blue-500/30 text-blue-300 font-medium rounded-lg flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                </svg>
-                Pyth Entropy
-              </div>
+              <button
+                onClick={() => setShowSmartAccountModal(true)}
+                className={`px-3 py-2 bg-gradient-to-r border font-medium rounded-lg flex items-center gap-2 hover:opacity-80 transition-opacity ${
+                  isSmartAccount 
+                    ? 'from-blue-500/20 to-cyan-600/20 border-blue-500/30 text-blue-300' 
+                    : 'from-green-500/20 to-emerald-600/20 border-green-500/30 text-green-300'
+                }`}
+              >
+                {isSmartAccount ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="9" cy="9" r="2"/>
+                    <path d="M21 15.5c-1.5-1.5-4-1.5-5.5 0"/>
+                    <path d="M12 12l9 9"/>
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                )}
+                {isSmartAccount ? 'Smart Account' : 'EOA Account'}
+              </button>
             )}
             
             {/* Live Chat Button */}
@@ -971,8 +1047,8 @@ export default function Navbar() {
               Live Chat
             </button>
             
-            {/* Stacks Wallet Button */}
-            <StacksWalletButton />
+            {/* Ethereum Wallet Button */}
+            <EthereumConnectWalletButton />
       
           </div>
         </div>
@@ -1025,8 +1101,8 @@ export default function Navbar() {
                   <div className="p-3 bg-gradient-to-r from-green-900/20 to-green-800/10 rounded-lg border border-green-800/30">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm text-gray-300">House Balance:</span>
-                                      <span className="text-sm text-green-300 font-medium">
-                      {isLoadingBalance ? 'Loading...' : `${parseFloat(userBalance || '0').toFixed(5)} STX`}
+                      <span className="text-sm text-green-300 font-medium">
+                      {isLoadingBalance ? 'Loading...' : `${parseFloat(userBalance || '0').toFixed(5)} PC`}
                     </span>
                     </div>
                     <button
@@ -1080,25 +1156,28 @@ export default function Navbar() {
               </div>
               
               {/* Current Balance */}
+              {/* Smart Account Info */}
+              <SmartAccountInfo />
+              
               <div className="mb-4 p-3 bg-gradient-to-r from-green-900/20 to-green-800/10 rounded-lg border border-green-800/30">
                 <span className="text-sm text-gray-300">Current Balance:</span>
                 <div className="text-lg text-green-300 font-bold">
-                  {isLoadingBalance ? 'Loading...' : `${parseFloat(userBalance || '0').toFixed(5)} STX`}
+                  {isLoadingBalance ? 'Loading...' : `${parseFloat(userBalance || '0').toFixed(5)} PC`}
                 </div>
               </div>
               
               {/* Deposit Section */}
               <div className="mb-6">
-                <h4 className="text-sm font-medium text-white mb-2">Deposit STX to Casino Treasury</h4>
+                <h4 className="text-sm font-medium text-white mb-2">Deposit PC to Casino Treasury</h4>
                 <div className="text-xs text-gray-400 mb-2">
-                  Treasury: {(process.env.NEXT_PUBLIC_CASINO_TREASURY_ADDRESS || 'STZ2YCW72SDSCVYQKEPC3PNQ7J69EFTFERHEPC9').slice(0, 10)}...{(process.env.NEXT_PUBLIC_CASINO_TREASURY_ADDRESS || 'STZ2YCW72SDSCVYQKEPC3PNQ7J69EFTFERHEPC9').slice(-8)}
+                  Treasury: {TREASURY_CONFIG.ADDRESS.slice(0, 10)}...{TREASURY_CONFIG.ADDRESS.slice(-8)}
                 </div>
                 <div className="flex gap-2">
                   <input
                     type="number"
                     value={depositAmount}
                     onChange={(e) => setDepositAmount(e.target.value)}
-                    placeholder="Enter STX amount"
+                    placeholder="Enter PC amount"
                     className="flex-1 px-3 py-2 bg-gray-800/50 border border-gray-600/50 rounded text-white placeholder-gray-400 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/25"
                     min="0"
                     step="0.00000001"
@@ -1125,7 +1204,7 @@ export default function Navbar() {
                   </button>
                 </div>
                 <p className="text-xs text-gray-400 mt-1">
-                  Transfer STX from your wallet to house balance for gaming
+                  Transfer PC from your wallet to house balance for gaming
                 </p>
                 {/* Quick Deposit Buttons */}
                 <div className="flex gap-1 mt-2">
@@ -1136,7 +1215,7 @@ export default function Navbar() {
                       className="flex-1 px-2 py-1 text-xs bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 rounded transition-colors"
                       disabled={isDepositing}
                     >
-                      {amount} STX
+                      {amount} PC
                     </button>
                   ))}
                 </div>
@@ -1145,7 +1224,7 @@ export default function Navbar() {
 
               {/* Withdraw Section */}
               <div className="mb-4">
-                <h4 className="text-sm font-medium text-white mb-2">Withdraw All STX</h4>
+                <h4 className="text-sm font-medium text-white mb-2">Withdraw PC</h4>
                 <button
                   onClick={handleWithdraw}
                   disabled={!isConnected || parseFloat(userBalance || '0') <= 0 || isWithdrawing}
@@ -1157,7 +1236,7 @@ export default function Navbar() {
                       Processing...
                     </>
                   ) : isConnected ? (
-                    parseFloat(userBalance || '0') > 0 ? 'Withdraw All STX' : 'No Balance'
+                    parseFloat(userBalance || '0') > 0 ? 'Withdraw All PC' : 'No Balance'
                   ) : 'Connect Wallet'}
                   {isConnected && parseFloat(userBalance || '0') > 0 && !isWithdrawing && (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1167,7 +1246,7 @@ export default function Navbar() {
                 </button>
                 {isConnected && parseFloat(userBalance || '0') > 0 && (
                   <p className="text-xs text-gray-400 mt-1 text-center">
-                    Withdraw {parseFloat(userBalance || '0').toFixed(5)} STX to your wallet
+                    Withdraw {parseFloat(userBalance || '0').toFixed(5)} PC to your wallet
                   </p>
                 )}
               </div>
@@ -1204,6 +1283,12 @@ export default function Navbar() {
       <LiveChat
         open={showLiveChat}
         onClose={() => setShowLiveChat(false)}
+      />
+      
+      {/* Smart Account Modal */}
+      <SmartAccountModal
+        isOpen={showSmartAccountModal}
+        onClose={() => setShowSmartAccountModal(false)}
       />
       
     </>

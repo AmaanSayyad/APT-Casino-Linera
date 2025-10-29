@@ -21,7 +21,6 @@ import { gameData, bettingTableData } from "./config/gameDetail";
 import { useToken } from "@/hooks/useToken";
 
 import useWalletStatus from '@/hooks/useWalletStatus';
-import { saveGameResult } from '@/utils/gameHistory';
 
 import { FaVolumeMute, FaVolumeUp, FaChartLine, FaCoins, FaTrophy, FaDice, FaBalanceScale, FaRandom, FaPercentage, FaPlayCircle } from "react-icons/fa";
 import { GiCardRandom, GiDiceTarget, GiRollingDices, GiPokerHand } from "react-icons/gi";
@@ -32,8 +31,7 @@ import StrategyGuide from './components/StrategyGuide';
 import RoulettePayout from './components/RoulettePayout';
 import WinProbabilities from './components/WinProbabilities';
 import RouletteHistory from './components/RouletteHistory';
-import { useStacksWallet } from '@/contexts/StacksWalletContext';
-import { useAccount } from 'wagmi';
+import { usePushWalletContext, usePushChainClient, PushUI } from '@pushchain/ui-kit';
 import { useSelector, useDispatch } from 'react-redux';
 import { setBalance, setLoading, loadBalanceFromStorage } from '@/store/balanceSlice';
 import pythEntropyService from '@/services/PythEntropyService';
@@ -41,10 +39,10 @@ import pythEntropyService from '@/services/PythEntropyService';
 // Ethereum client functions will be added here when needed
 
 // Casino module address for Ethereum
-const CASINO_MODULE_ADDRESS = "0x1234567890123456789012345678901234567890123456789012345678901234";
+const CASINO_MODULE_ADDRESS = process.env.NEXT_PUBLIC_CASINO_MODULE_ADDRESS || "0x0000000000000000000000000000000000000000";
 
-const parseOGAmount = (amount) => {
-  // Parse STX amount
+const parsePCAmount = (amount) => {
+  // Parse PC amount
   return parseFloat(amount);
 };
 
@@ -1106,8 +1104,8 @@ export default function GameRoulette() {
                       <FaCoins className="text-yellow-400" />
                     </div>
                     <div className="text-xs text-white/50 font-sans text-center">Volume</div>
-                    <div className="text-white font-display text-sm md:text-base truncate w-full text-center" title={`${gameStatistics.totalVolume} STX`}>
-                      {gameStatistics.totalVolume} STX
+                    <div className="text-white font-display text-sm md:text-base truncate w-full text-center" title={`${gameStatistics.totalVolume} PC`}>
+                      {gameStatistics.totalVolume} PC
                     </div>
                   </div>
 
@@ -1116,8 +1114,8 @@ export default function GameRoulette() {
                       <FaTrophy className="text-yellow-500" />
                     </div>
                     <div className="text-xs text-white/50 font-sans text-center">Max Win</div>
-                    <div className="text-white font-display text-sm md:text-base truncate w-full text-center" title={`${gameStatistics.maxWin} STX`}>
-                      {gameStatistics.maxWin} STX
+                    <div className="text-white font-display text-sm md:text-base truncate w-full text-center" title={`${gameStatistics.maxWin} PC`}>
+                      {gameStatistics.maxWin} PC
                     </div>
                   </div>
                 </motion.div>
@@ -1192,21 +1190,19 @@ export default function GameRoulette() {
   const [bettingHistory, setBettingHistory] = useState([]);
   const [error, setError] = useState(null);
 
-  // Stacks wallet for main functionality
-  const { address: stacksAddress, isConnected: stacksConnected } = useStacksWallet();
-  
-  // Wagmi for Pyth Entropy (Arbitrum Sepolia)
-  const { address: ethAddress, isConnected: ethConnected } = useAccount();
-  
-  // Use Stacks wallet as primary
-  const account = { address: stacksAddress };
-  const connected = stacksConnected;
-  const isWalletReady = stacksConnected && stacksAddress;
+  // Push Universal Wallet
+  const { connectionStatus } = usePushWalletContext();
+  const { pushChainClient } = usePushChainClient();
+  const isConnected = connectionStatus === PushUI.CONSTANTS.CONNECTION.STATUS.CONNECTED;
+  const address = pushChainClient?.universal?.account || null;
+  const account = { address };
+  const connected = isConnected;
+  const isWalletReady = isConnected && address;
   const [realBalance, setRealBalance] = useState('0');
-  const { balance } = useToken(stacksAddress); // Keep for compatibility
+  const { balance } = useToken(address); // Keep for compatibility
   const HOUSE_ADDR = CASINO_MODULE_ADDRESS;
 
-  // Function to fetch real STX balance will be defined after useSelector
+  // Function to fetch real PC balance will be defined after useSelector
 
   // Sound refs
   const spinSoundRef = useRef(null);
@@ -1373,7 +1369,7 @@ export default function GameRoulette() {
   const dispatch = useDispatch();
   const { userBalance, isLoading: isLoadingBalance } = useSelector((state) => state.balance);
 
-  // Function to fetch real STX balance
+  // Function to fetch real PC balance
   const fetchRealBalance = useCallback(async () => {
     if (!account?.address) return;
 
@@ -1603,8 +1599,8 @@ export default function GameRoulette() {
 
   const lockBet = async () => {
     // Check if wallet is connected
-    if (!stacksConnected) {
-      alert("Please connect your Stacks wallet first to play Roulette!");
+    if (!isConnected) {
+      alert("Please connect your Ethereum wallet first to play Roulette!");
       return;
     }
 
@@ -1614,11 +1610,11 @@ export default function GameRoulette() {
     }
 
     // Check Redux balance instead of wallet
-    const currentBalance = parseFloat(userBalance || '0'); // Balance is already in STX
+    const currentBalance = parseFloat(userBalance || '0'); // Balance is already in PC
     const totalBetAmount = total;
 
     if (currentBalance < totalBetAmount) {
-      alert(`Insufficient balance. You have ${currentBalance.toFixed(5)} STX but need ${totalBetAmount.toFixed(5)} STX`);
+      alert(`Insufficient balance. You have ${currentBalance.toFixed(5)} PC but need ${totalBetAmount.toFixed(5)} PC`);
       return;
     }
 
@@ -1640,7 +1636,7 @@ export default function GameRoulette() {
       
       // Check if user has enough balance
       if (originalBalance < totalBetAmount) {
-        alert(`Insufficient balance. You have ${originalBalance.toFixed(5)} STX but need ${totalBetAmount.toFixed(5)} STX`);
+        alert(`Insufficient balance. You have ${originalBalance.toFixed(5)} PC but need ${totalBetAmount.toFixed(5)} PC`);
         setSubmitDisabled(false);
         setWheelSpinning(false);
         return;
@@ -2033,12 +2029,101 @@ export default function GameRoulette() {
             sequenceNumber: entropyResult.entropyProof.sequenceNumber,
             randomValue: entropyResult.randomValue,
             transactionHash: entropyResult.entropyProof.transactionHash,
-            arbiscanUrl: entropyResult.entropyProof.arbiscanUrl,
+            monadExplorerUrl: entropyResult.entropyProof.monadExplorerUrl,
             explorerUrl: entropyResult.entropyProof.explorerUrl,
             timestamp: entropyResult.entropyProof.timestamp,
             source: 'Pyth Entropy'
           };
           
+          // Log game result to Push Chain
+          fetch('/api/log-to-push', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              gameType: 'ROULETTE',
+              gameResult: {
+                winningNumber,
+                totalBets: allBets.length,
+                winningBets: winningBets.length,
+                losingBets: losingBets.length
+              },
+              playerAddress: address || 'unknown',
+              betAmount: totalBetAmount,
+              payout: netResult,
+              entropyProof: newBet.entropyProof
+            })
+          }).then(response => response.json())
+            .then(pushResult => {
+              console.log('🔗 Push Chain logging result:', pushResult);
+              if (pushResult.success) {
+                // Add Push Chain info to bet result
+                newBet.pushChainTxHash = pushResult.transactionHash;
+                newBet.pushChainExplorerUrl = pushResult.pushChainExplorerUrl;
+                
+                // Update betting history with Push Chain info
+                setBettingHistory(prev => {
+                  const updatedHistory = [...prev];
+                  if (updatedHistory.length > 0) {
+                    updatedHistory[0] = { 
+                      ...updatedHistory[0], 
+                      pushChainTxHash: pushResult.transactionHash,
+                      pushChainExplorerUrl: pushResult.pushChainExplorerUrl
+                    };
+                  }
+                  return updatedHistory;
+                });
+              }
+            })
+            .catch(error => {
+              console.error('❌ Push Chain logging failed:', error);
+            });
+
+          // Log game result to Solana
+          fetch('/api/log-to-solana', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              gameType: 'ROULETTE',
+              gameResult: {
+                winningNumber,
+                totalBets: allBets.length,
+                winningBets: winningBets.length,
+                losingBets: losingBets.length
+              },
+              playerAddress: address || 'unknown',
+              betAmount: totalBetAmount,
+              payout: netResult,
+              entropyProof: newBet.entropyProof
+            })
+          }).then(response => response.json())
+            .then(solanaResult => {
+              console.log('🔗 Solana logging result:', solanaResult);
+              if (solanaResult.success) {
+                // Add Solana info to bet result
+                newBet.solanaTxSignature = solanaResult.transactionSignature;
+                newBet.solanaExplorerUrl = solanaResult.solanaExplorerUrl;
+                
+                // Update betting history with Solana info
+                setBettingHistory(prev => {
+                  const updatedHistory = [...prev];
+                  if (updatedHistory.length > 0) {
+                    updatedHistory[0] = { 
+                      ...updatedHistory[0], 
+                      solanaTxSignature: solanaResult.transactionSignature,
+                      solanaExplorerUrl: solanaResult.solanaExplorerUrl
+                    };
+                  }
+                  return updatedHistory;
+                });
+              }
+            })
+            .catch(error => {
+              console.error('❌ Solana logging failed:', error);
+            });
           
           // Update betting history with entropy proof
           setBettingHistory(prev => {
@@ -2058,7 +2143,7 @@ export default function GameRoulette() {
                 sessionId: entropyResult.entropyProof.requestId || `roulette_${Date.now()}`,
                 gameType: 'ROULETTE',
                 channelId: entropyResult.entropyProof.requestId || 'entropy_channel',
-                valueOg: 0
+                valueMon: 0
               })
             })
               .then(async (r) => {
@@ -2072,9 +2157,9 @@ export default function GameRoulette() {
           
           // Pyth Entropy handles randomness generation
           console.log('✅ Pyth Entropy randomness processed for Roulette');
-        }).then(async () => {
+        }).then(() => {
           console.log('📊 PYTH ENTROPY: Roulette game completed successfully');
-        }).catch(async (error) => {
+        }).catch(error => {
           console.error('❌ PYTH ENTROPY: Error processing Roulette game:', error);
           // Still add the bet result even if Pyth Entropy processing fails
           newBet.entropyProof = null;
@@ -2088,39 +2173,6 @@ export default function GameRoulette() {
           totalBetAmount
         });
 
-        // Save game result with Stacks logging and update bet object
-        saveGameResult({
-          vrfRequestId: newBet.entropyProof?.requestId || 'roulette_' + Date.now(),
-          userAddress: stacksAddress || 'anonymous',
-          gameType: 'ROULETTE',
-          gameConfig: { betType: 'multiple', totalBets: totalBetAmount },
-          resultData: {
-            winningNumber: winningNumber,
-            winningBets: winningBets.map(bet => bet.name),
-            totalWinAmount: netResult
-          },
-          betAmount: totalBetAmount,
-          payoutAmount: netResult,
-          entropyProof: newBet.entropyProof
-        }).then(result => {
-          // Update the bet object with Stacks transaction info
-          if (result?.stacksLogResult?.txId) {
-            setBettingHistory(prev => {
-              const updatedHistory = [...prev];
-              if (updatedHistory.length > 0) {
-                updatedHistory[0] = { 
-                  ...updatedHistory[0], 
-                  stacksTxId: result.stacksLogResult.txId,
-                  stacksExplorerUrl: result.stacksLogResult.stacksExplorerUrl
-                };
-              }
-              return updatedHistory;
-            });
-          }
-        }).catch(saveError => {
-          console.warn('⚠️ Failed to save roulette game result:', saveError);
-        });
-
         setBettingHistory(prev => [newBet, ...prev].slice(0, 50)); // Keep last 50 bets
 
         console.log("New bet added to history:", newBet); // Debug log
@@ -2129,16 +2181,16 @@ export default function GameRoulette() {
         // Show result notification
         if (netResult > 0) {
           const winMessage = winningBets.length === 1
-                    ? `🎉 WINNER! ${winningBets[0].name} - You won ${(netResult - totalBetAmount).toFixed(5)} STX!`
-                    : `🎉 MULTIPLE WINNERS! ${winningBets.length} bets won - Total: ${(netResult - totalBetAmount).toFixed(5)} STX!`;
+                    ? `🎉 WINNER! ${winningBets[0].name} - You won ${(netResult - totalBetAmount).toFixed(5)} PC!`
+                    : `🎉 MULTIPLE WINNERS! ${winningBets.length} bets won - Total: ${(netResult - totalBetAmount).toFixed(5)} PC!`;
 
           setNotificationMessage(winMessage);
           setNotificationSeverity("success");
           setSnackbarMessage(winMessage);
         } else {
-          setNotificationMessage(`💸 Number ${winningNumber} - You lost ${totalBetAmount.toFixed(5)} STX!`);
+          setNotificationMessage(`💸 Number ${winningNumber} - You lost ${totalBetAmount.toFixed(5)} PC!`);
           setNotificationSeverity("error");
-          setSnackbarMessage(`💸 Number ${winningNumber} - You lost ${totalBetAmount.toFixed(5)} STX!`);
+          setSnackbarMessage(`💸 Number ${winningNumber} - You lost ${totalBetAmount.toFixed(5)} PC!`);
         }
         setSnackbarOpen(true);
 
@@ -2197,7 +2249,7 @@ export default function GameRoulette() {
     if (e) e.preventDefault();
     playSound(winSoundRef);
 
-    if (!stacksAddress) {
+    if (!address) {
       console.error("Wallet not connected.");
       alert("Please connect your wallet.");
       return;
@@ -2215,7 +2267,7 @@ export default function GameRoulette() {
           abi: rouletteABI,
           functionName: "withdrawTokens",
           args: [amount],
-          account: ethAddress, // Use ETH address for Ethereum contracts
+          account: address,
         });
 
       // Execute the contract transaction
@@ -2240,7 +2292,7 @@ export default function GameRoulette() {
     }
   }, [playSound, winnings, reset]);
 
-  // Wagmi config removed - using Stacks wallet
+  const config = undefined; // wagmi removed
 
   const contractAddress = '0xbD8Ca722093d811bF314dDAB8438711a4caB2e73'; // ✅ FIX THIS
 
@@ -2269,9 +2321,9 @@ export default function GameRoulette() {
     console.log("Checking network...");
 
     try {
-      // First check if user is connected via Stacks wallet
-      if (stacksConnected && stacksAddress) {
-        console.log("Wallet connected via Stacks:", stacksAddress);
+      // First check if user is connected via wagmi
+      if (isConnected && address) {
+        console.log("Wallet connected via wagmi:", address);
         setCorrectNetwork(true);
         return;
       }
@@ -2320,7 +2372,7 @@ export default function GameRoulette() {
     // Only check when component mounts or when wallet connection changes
     if (typeof window !== "undefined") {
       console.log("Wallet connection state changed, checking network...");
-      console.log("stacksConnected:", stacksConnected, "stacksAddress:", stacksAddress);
+      console.log("isConnected:", isConnected, "address:", address);
 
       checkNetwork();
 
@@ -2347,7 +2399,7 @@ export default function GameRoulette() {
 
       return setupListeners();
     }
-  }, [stacksConnected, stacksAddress]); // Add dependencies to run when wallet connection changes
+  }, [isConnected, address]); // Add dependencies to run when wallet connection changes
 
   const switchNetwork = async () => {
     // Ensure we're running in the browser
@@ -2355,7 +2407,7 @@ export default function GameRoulette() {
 
     try {
       // Check if wallet is connected first
-      if (!stacksConnected) {
+      if (!isConnected) {
         console.log("Wallet not connected, please connect wallet first");
         alert("Please connect your wallet first using the connect button in the top right corner");
         return;
@@ -2649,7 +2701,7 @@ export default function GameRoulette() {
               }}
             >
               <FaCoins className="text-yellow-400" />
-              Balance: {stacksConnected ? `${parseFloat(userBalance || '0').toFixed(5)} STX` : 'Connect Wallet'}
+              Balance: {isConnected ? `${parseFloat(userBalance || '0').toFixed(5)} PC` : 'Connect Wallet'}
             </Typography>
           </Box>
 
@@ -3141,7 +3193,7 @@ export default function GameRoulette() {
                 </Typography>
               </Box>
               
-              {!stacksConnected ? (
+              {!isConnected ? (
                 <Box sx={{ textAlign: 'center', py: 1 }}>
                   <Button
                     onClick={() => {
@@ -3203,7 +3255,7 @@ export default function GameRoulette() {
               />
 
               <Typography color="white" sx={{ opacity: 0.8 }}>
-                Current Bet Total: {total.toFixed(5)} STX
+                Current Bet Total: {total.toFixed(5)} PC
               </Typography>
 
               {/* Quick Bet Buttons */}
@@ -3288,7 +3340,7 @@ export default function GameRoulette() {
                       loading={submitDisabled}
                       onClick={lockBet}
                     >
-                      {total > 0 ? `Place Bet (${total.toFixed(5)} ETH)` : 'Place Bet (ETH)'}
+                      {total > 0 ? `Place Bet (${total.toFixed(5)} PC)` : 'Place Bet (PC)'}
                     </Button>
                     {submitDisabled && rollResult < 0 && (
                       <Typography color="white" sx={{ opacity: 0.8 }}>
@@ -3630,9 +3682,9 @@ export default function GameRoulette() {
             {notificationIndex === notificationSteps.RESULT_READY && (
               <Typography>
                 {winnings > 0
-                  ? `🎉 You won ${winnings.toFixed(4)} STX!`
+                  ? `🎉 You won ${winnings.toFixed(4)} PC!`
                   : winnings < 0
-                  ? `💸 You lost ${Math.abs(winnings).toFixed(4)} STX!`
+                  ? `💸 You lost ${Math.abs(winnings).toFixed(4)} PC!`
                   : "🤝 Break even!"}
               </Typography>
             )}

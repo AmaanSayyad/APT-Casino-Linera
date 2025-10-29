@@ -45,7 +45,7 @@ const Game = ({ betSettings = {}, onGameStatusChange, onGameComplete }) => {
 
   // Game Settings
   const defaultSettings = {
-    betAmount: 0.001, // Default to 0.001 STX
+    betAmount: 0.001, // Default to 0.001 PC
     mines: 5,
     isAutoBetting: false,
     tilesToReveal: 5,
@@ -336,11 +336,11 @@ const Game = ({ betSettings = {}, onGameStatusChange, onGameComplete }) => {
           return;
         }
         
-        // Check Redux balance (balance is already in STX)
+        // Check Redux balance PC)
         const currentBalance = parseFloat(userBalance || '0');
         
         if (currentBalance < parseFloat(settings.betAmount)) {
-          toast.error(`Insufficient balance. You have ${currentBalance.toFixed(5)} STX but need ${parseFloat(settings.betAmount).toFixed(5)} STX`);
+          toast.error(`Insufficient balance. You have ${currentBalance.toFixed(5)} PC but need ${parseFloat(settings.betAmount)} PC`);
           return;
         }
 
@@ -353,14 +353,14 @@ const Game = ({ betSettings = {}, onGameStatusChange, onGameComplete }) => {
           console.log('Bet amount (ETH):', settings.betAmount);
           console.log('Current balance (ETH):', currentBalance);
           console.log('Mines count:', settings.mines);
-          console.log('Balance deducted. New balance:', parseFloat(newBalance).toFixed(5), 'STX');
+          console.log('balance PC');
           
           // Start the game immediately
           setIsPlaying(true);
           setHasPlacedBet(true);
           playSound('bet');
           
-          toast.success(`Bet placed! ${parseFloat(settings.betAmount).toFixed(5)} STX deducted from balance`);
+          toast.success(`Bet placed! ${parseFloat(settings.betAmount).toFixed(5)} PC deducted from balance`);
           toast.info(`Game starting...`);
           
           // Special message if AI-assisted auto betting
@@ -370,7 +370,7 @@ const Game = ({ betSettings = {}, onGameStatusChange, onGameComplete }) => {
           } else if (settings.isAutoBetting) {
             toast.info(`Auto betting mode: Will reveal ${settings.tilesToReveal || 5} tiles`);
           } else {
-            toast.info(`Bet placed: ${parseFloat(settings.betAmount).toFixed(5)} STX, ${settings.mines} mines`);
+            toast.info(`Bet placed: ${parseFloat(settings.betAmount).toFixed(5)} PC, ${settings.mines} mines`);
           }
           
           // If auto-betting is enabled, automatically reveal tiles with minimal delay
@@ -657,7 +657,7 @@ const Game = ({ betSettings = {}, onGameStatusChange, onGameComplete }) => {
       
       // Cashout is just a local operation - no blockchain transaction needed
       // The actual payout was already handled in the initial bet transaction
-              toast.success(`Cashed out: ${payout.toFixed(5)} STX (${multiplier.toFixed(2)}x)`);
+              toast.success(`Cashed out: ${payout.toFixed(5)} PC (${multiplier.toFixed(2)}x)`);
       playSound('cashout');
       
       // Update user balance in Redux store (add payout to current balance)
@@ -981,7 +981,7 @@ const Game = ({ betSettings = {}, onGameStatusChange, onGameComplete }) => {
               } rounded-lg text-white font-bold shadow-lg transition-all flex items-center justify-center gap-2`}
             >
               <FaCoins className="text-yellow-300" />
-              <span>CASH OUT ({calculatePayout()} ETH)</span>
+              <span>CASH OUT ({calculatePayout()} PC)</span>
             </button>
           </div>
         )}
@@ -991,7 +991,7 @@ const Game = ({ betSettings = {}, onGameStatusChange, onGameComplete }) => {
           <div className="text-center py-3 bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg text-white font-bold">
             <span>🎉 CONGRATULATIONS! YOU WON! 🎉</span>
             <div className="mt-2 text-sm opacity-90">
-              Winnings: {calculatePayout()} STX ({multiplier.toFixed(2)}x)
+              Winnings: {calculatePayout()} PC ({multiplier.toFixed(2)}x)
             </div>
           </div>
         )}

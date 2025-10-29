@@ -19,7 +19,7 @@ export default function HeroSection() {
         <div className="w-full max-w-2xl mx-auto bg-gradient-to-r from-red-magic/10 to-blue-magic/10 backdrop-blur-sm p-3 rounded-lg border border-purple-500/20 flex justify-center items-center mb-8 mt-8 sm:mt-6">
           <p className="text-sm text-white text-center">
             <span className="bg-purple-600 text-white px-2 py-0.5 rounded-md text-xs font-medium mr-2">NEW</span>
-            High Roller Tournament starting soon! 10,000 STX prize pool.
+            High Roller Tournament starting soon! 10,000 PC prize pool.
           </p>
           <button 
             onClick={() => setShowAnnouncement(false)}
@@ -34,13 +34,13 @@ export default function HeroSection() {
         `font-display capitalize flex text-white flex-col text-center items-center gap-6 z-10 max-w-7xl w-full mx-auto ${showAnnouncement ? '' : 'mt-14 sm:mt-14 md:mt-16'}`
       }>
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight">
-          100% On-Chain{" "}
+          Universal On-chain {" "}
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-red-magic to-blue-magic">
-          Randomness
+          Casino
           </span>
         </h1>
         <h2 className="text-[#B3B3B3] mt-4 text-lg sm:text-xl leading-relaxed max-w-3xl">
-          <span className="text-white font-semibold">Autonomous Provably Transparent</span> gaming powered by <span className="text-white font-semibold">Stacks</span> & <span className="text-white font-semibold">Pyth Entropy</span>. Experience decentralized randomness with cryptographic fairness you can verify, not just trust.
+          <span className="text-white font-semibold">Autonomous Provably Transparent</span> gaming powered by <span className="text-white font-semibold">Push Chain</span> & <span className="text-white font-semibold">Pyth Entropy</span>. Experience decentralized randomness with cryptographic fairness you can verify, not just trust.
         </h2>
         <p className="text-[#B3B3B3] text-lg sm:text-xl max-w-3xl">
           No rigged outcomes. No hidden limits. No custody of your funds. 
@@ -73,7 +73,7 @@ export default function HeroSection() {
           <div className="text-center">
             <p className="text-gray-400 text-sm">Jackpot Size</p>
             <p className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-magic to-blue-magic">
-              {isDev ? '15,000' : '37,500'} STX
+              {isDev ? '15,000' : '37,500'} PC
             </p>
           </div>
           <div className="text-center hidden sm:block">

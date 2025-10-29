@@ -2,12 +2,12 @@
 import { useState, useEffect } from "react";
 import { ChevronDown, ChevronUp, Minus, Plus } from "lucide-react";
 import { useSelector } from 'react-redux';
-import { useStacksWallet } from '@/contexts/StacksWalletContext';
+import useWalletStatus from '@/hooks/useWalletStatus';
 import pythEntropyService from '@/services/PythEntropyService';
 
 export default function GameControls({ onBet, onRowChange, onRiskLevelChange, onBetAmountChange, initialRows = 16, initialRiskLevel = "Medium" }) {
   const userBalance = useSelector((state) => state.balance.userBalance);
-  const { isConnected } = useStacksWallet();
+  const { isConnected } = useWalletStatus();
   
   const [gameMode, setGameMode] = useState("manual");
   const [betAmount, setBetAmount] = useState("0.001");
@@ -28,6 +28,15 @@ export default function GameControls({ onBet, onRowChange, onRiskLevelChange, on
     setRiskLevel(initialRiskLevel);
     setRows(initialRows);
   }, [initialRiskLevel, initialRows]);
+
+  // Notify parent component when bet amount changes
+  useEffect(() => {
+    if (onBetAmountChange) {
+      const numericBetAmount = parseFloat(betAmount) || 0;
+      onBetAmountChange(numericBetAmount);
+      console.log('GameControls: Bet amount changed, notifying parent:', numericBetAmount);
+    }
+  }, [betAmount, onBetAmountChange]);
 
   // Cleanup auto betting interval when component unmounts or game mode changes
   useEffect(() => {
@@ -121,12 +130,12 @@ export default function GameControls({ onBet, onRowChange, onRiskLevelChange, on
     console.log('handleBet called with betValue:', betValue, 'currentBalance (ETH):', currentBalance);
     
     if (betValue < 0.001) {
-      alert("Minimum bet amount is 0.001 STX");
+      alert("Minimum bet amount is 0.001 PC");
       return;
     }
     
     if (betValue > currentBalance) {
-      alert(`Insufficient balance! You have ${currentBalance.toFixed(5)} STX but need ${betValue} STX`);
+      alert(`Insufficient balance! You have ${currentBalance.toFixed(5)} PC but need ${betValue} PC`);
       return;
     }
     
@@ -180,7 +189,7 @@ export default function GameControls({ onBet, onRowChange, onRiskLevelChange, on
     });
     
     if (totalBetAmount > currentBalance) {
-      alert(`Insufficient balance for ${totalBets} bets of ${betAmount} STX each. You need ${totalBetAmount.toFixed(3)} STX but have ${currentBalance.toFixed(5)} STX`);
+      alert(`Insufficient balance for ${totalBets} bets of ${betAmount} PC each. You need ${totalBetAmount.toFixed(3)} PC but have ${currentBalance.toFixed(5)} PC`);
       setIsAutoPlaying(false);
       return;
     }
@@ -328,8 +337,8 @@ export default function GameControls({ onBet, onRowChange, onRiskLevelChange, on
     return totalBetAmount <= currentBalance && betValue >= 0.001;
   };
 
-  // Get current balance in STX for display
-  const getCurrentBalanceInOG = () => {
+  // Get current balance in PC for display
+  const getCurrentBalanceInPC = () => {
     return parseFloat(userBalance || '0').toFixed(5);
   };
 
@@ -368,7 +377,7 @@ export default function GameControls({ onBet, onRowChange, onRiskLevelChange, on
           Bet Amount
         </label>
         <div className="mb-2">
-          <span className="text-2xl font-bold text-white">{betAmount} STX</span>
+          <span className="text-2xl font-bold text-white">{betAmount} PC</span>
         </div>
         <div className="relative">
           <input
@@ -424,37 +433,37 @@ export default function GameControls({ onBet, onRowChange, onRiskLevelChange, on
             onClick={() => handleBetAmountChange(0.001)}
             className="bg-[#2A0025] border border-[#333947] rounded-lg py-2 text-xs text-white hover:bg-[#3A0035] transition-colors"
           >
-            0.001 STX
+            0.001 PC
           </button>
           <button
             onClick={() => handleBetAmountChange(0.01)}
             className="bg-[#2A0025] border border-[#333947] rounded-lg py-2 text-xs text-white hover:bg-[#3A0035] transition-colors"
           >
-            0.01 STX
+            0.01 PC
           </button>
           <button
             onClick={() => handleBetAmountChange(0.1)}
             className="bg-[#2A0025] border border-[#333947] rounded-lg py-2 text-xs text-white hover:bg-[#3A0035] transition-colors"
           >
-            0.1 STX
+            0.1 PC
           </button>
           <button
             onClick={() => handleBetAmountChange(1)}
             className="bg-[#2A0025] border border-[#333947] rounded-lg py-2 text-xs text-white hover:bg-[#3A0035] transition-colors"
           >
-            1.0 STX
+            1.0 PC
           </button>
           <button
             onClick={() => handleBetAmountChange(5)}
             className="bg-[#2A0025] border border-[#333947] rounded-lg py-2 text-xs text-white hover:bg-[#3A0035] transition-colors"
           >
-            5.0 STX
+            5.0 PC
           </button>
           <button
             onClick={() => handleBetAmountChange(10)}
             className="bg-[#2A0025] border border-[#333947] rounded-lg py-2 text-xs text-white hover:bg-[#3A0035] transition-colors"
           >
-            10.0 STX
+            10.0 PC
           </button>
         </div>
       </div>
@@ -559,7 +568,7 @@ export default function GameControls({ onBet, onRowChange, onRiskLevelChange, on
           <div className="text-center p-3 bg-[#2A0025] rounded-lg border border-[#333947]">
             <span className="text-sm text-gray-400">Current Balance:</span>
             {isConnected ? (
-              <div className="text-lg font-bold text-green-400">{getCurrentBalanceInOG()} STX</div>
+              <div className="text-lg font-bold text-green-400">{getCurrentBalanceInPC()} PC</div>
             ) : (
               <div className="text-lg font-bold text-red-400">Connect Wallet</div>
             )}
@@ -582,8 +591,8 @@ export default function GameControls({ onBet, onRowChange, onRiskLevelChange, on
           {((gameMode === "auto" && !hasSufficientBalanceForAutoBet()) || (!gameMode === "auto" && !hasSufficientBalance())) && parseFloat(betAmount) > 0 && (
             <div className="text-center text-red-400 text-sm">
               {gameMode === "auto" 
-                ? `Insufficient balance for ${numberOfBets} bets of ${betAmount} STX each` 
-                : `Insufficient balance for ${betAmount} STX bet`
+                ? `Insufficient balance PC each` 
+                : `Insufficient balance PC bet`
               }
             </div>
           )}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useStacksWallet } from '@/contexts/StacksWalletContext';
+import { usePushWalletContext, usePushChainClient, PushUI } from '@pushchain/ui-kit';
 import WalletConnectionHandler from '../Wallet/WalletConnectionHandler';
 import { useVRFPregeneration } from '../../hooks/useVRFPregeneration';
 import VRFStatusModal from '../VRF/VRFStatusModal';
@@ -9,7 +9,10 @@ import VRFStatusModal from '../VRF/VRFStatusModal';
  * Wraps the entire app with wallet connection handling
  */
 const AppLayout = ({ children }) => {
-  const { address, isConnected } = useStacksWallet();
+  const { connectionStatus } = usePushWalletContext();
+  const { pushChainClient } = usePushChainClient();
+  const isConnected = connectionStatus === PushUI.CONSTANTS.CONNECTION.STATUS.CONNECTED;
+  const address = pushChainClient?.universal?.account || null;
   const {
     vrfStatus,
     totalVRF,
@@ -99,7 +102,7 @@ const AppLayout = ({ children }) => {
                 <span className="font-medium">Provably Fair Gaming</span>
               </div>
               <p className="text-sm">
-                All games use Pyth Entropy for verifiable randomness on Stacks
+                All games use Pyth Entropy for verifiable randomness on Monad Network
               </p>
             </div>
           </div>

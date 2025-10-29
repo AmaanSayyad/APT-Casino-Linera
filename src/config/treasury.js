@@ -3,18 +3,21 @@
 
 // Test Treasury Address (Replace with your actual treasury address in production)
 export const TREASURY_CONFIG = {
-  // Casino Treasury Wallet (Arbitrum Sepolia)
-  ADDRESS: process.env.TREASURY_ADDRESS || '0xb424d2369F07b925D1218B08e56700AF5928287b',
+  // Push Chain Treasury Wallet (for deposits/withdrawals)
+  ADDRESS: process.env.PUSH_CHAIN_TREASURY_ADDRESS || process.env.TREASURY_ADDRESS || '0xb424d2369F07b925D1218B08e56700AF5928287b',
   
   // ⚠️  DEVELOPMENT ONLY - Never use in production!
-  PRIVATE_KEY: process.env.TREASURY_PRIVATE_KEY || '0x080c0b0dc7aa27545fab73d29b06f33e686d1491aef785bf5ced325a32c14506',
+  PRIVATE_KEY: process.env.PUSH_CHAIN_TREASURY_PRIVATE_KEY || process.env.TREASURY_PRIVATE_KEY || '0x080c0b0dc7aa27545fab73d29b06f33e686d1491aef785bf5ced325a32c14506',
   
-  // Network configuration for Stacks Testnet Testnet (for deposit/withdraw)
+  // Network configuration for Push Chain Donut Testnet (for deposit/withdraw)
   NETWORK: {
-    CHAIN_ID: '0x40da', // Stacks Testnet testnet (16602 in hex)
-    CHAIN_NAME: '0G-Galileo-Testnet',
-    RPC_URL: process.env.NEXT_PUBLIC_0G_GALILEO_RPC || 'https://evmrpc-testnet.0g.ai',
-    EXPLORER_URL: process.env.NEXT_PUBLIC_0G_GALILEO_EXPLORER || 'https://chainscan-galileo.0g.ai'
+    CHAIN_ID: '0xa475', // Push Chain Donut testnet (42101 in hex)
+    CHAIN_NAME: 'Push Chain Donut Testnet',
+    RPC_URL: process.env.NEXT_PUBLIC_PUSH_CHAIN_RPC || 'https://evm.rpc-testnet-donut-node1.push.org/',
+    EXPLORER_URL: process.env.NEXT_PUBLIC_PUSH_CHAIN_EXPLORER || 'https://donut.push.network',
+    CURRENCY_SYMBOL: 'PC',
+    CURRENCY_NAME: 'Push Chain',
+    CURRENCY_DECIMALS: 18
   },
   
   // Gas settings for transactions
@@ -23,10 +26,10 @@ export const TREASURY_CONFIG = {
     WITHDRAW_LIMIT: process.env.GAS_LIMIT_WITHDRAW ? '0x' + parseInt(process.env.GAS_LIMIT_WITHDRAW).toString(16) : '0x186A0', // 100000 gas for more complex operations
   },
   
-  // Minimum and maximum deposit amounts (in STX)
+  // Minimum and maximum deposit amounts (in PC)
   LIMITS: {
-    MIN_DEPOSIT: parseFloat(process.env.MIN_DEPOSIT) || 0.001, // 0.001 STX minimum
-    MAX_DEPOSIT: parseFloat(process.env.MAX_DEPOSIT) || 100, // 100 STX maximum
+    MIN_DEPOSIT: parseFloat(process.env.MIN_DEPOSIT) || 0.001, // 0.001 PC minimum
+    MAX_DEPOSIT: parseFloat(process.env.MAX_DEPOSIT) || 100, // 100 PC maximum
   }
 };
 

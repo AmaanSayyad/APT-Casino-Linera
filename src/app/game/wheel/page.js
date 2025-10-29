@@ -15,12 +15,11 @@ import { useSelector, useDispatch } from 'react-redux';
 import { setBalance, setLoading, loadBalanceFromStorage } from '@/store/balanceSlice';
 import { useNotification } from '@/components/NotificationSystem';
 import useWalletStatus from '@/hooks/useWalletStatus';
-import { saveGameResult } from '@/utils/gameHistory';
-import pythEntropyService from '@/services/PythEntropyService';
 // Pyth Entropy integration for randomness
 // import vrfProofService from '@/services/VRFProofService';
 // import VRFProofRequiredModal from '@/components/VRF/VRFProofRequiredModal';
 // import vrfLogger from '@/services/VRFLoggingService';
+import pythEntropyService from '@/services/PythEntropyService';
 
 // Import new components
 import WheelVideo from "./components/WheelVideo";
@@ -95,7 +94,7 @@ export default function Home() {
     }
 
     // Generate Pyth Entropy in background for provably fair proof
-  const generateEntropyInBackground = async (historyItemId) => {
+  const generateEntropyInBackground = async (historyItemId, historyItem = null) => {
     try {
       console.log('🔮 PYTH ENTROPY: Generating background entropy for Wheel game...');
       
@@ -106,26 +105,131 @@ export default function Home() {
       
       console.log('✅ PYTH ENTROPY: Background entropy generated successfully');
       console.log('🔗 Transaction:', entropyResult.entropyProof.transactionHash);
+      console.log('🎯 Target history item ID:', historyItemId);
       
-      // Update the history item with real entropy proof
-      setGameHistory(prev => prev.map(item => 
-        item.id === historyItemId 
-          ? {
-              ...item,
+      // Log game result to Push Chain
+      const targetHistoryItem = historyItem || gameHistory.find(item => item.id === historyItemId);
+      console.log('🎯 Target history item:', targetHistoryItem);
+      if (targetHistoryItem) {
+        try {
+          const pushResponse = await fetch('/api/log-to-push', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              gameType: 'WHEEL',
+              gameResult: {
+                multiplier: targetHistoryItem.multiplier,
+                payout: targetHistoryItem.payout,
+                segments: targetHistoryItem.segments || 'unknown'
+              },
+              playerAddress: 'unknown', // Will be updated when wallet integration is available
+              betAmount: targetHistoryItem.betAmount || 0,
+              payout: targetHistoryItem.payout || 0,
               entropyProof: {
                 requestId: entropyResult.entropyProof?.requestId,
                 sequenceNumber: entropyResult.entropyProof?.sequenceNumber,
                 randomValue: entropyResult.randomValue,
-                randomNumber: entropyResult.randomValue,
                 transactionHash: entropyResult.entropyProof?.transactionHash,
-                arbiscanUrl: entropyResult.entropyProof?.arbiscanUrl,
-                explorerUrl: entropyResult.entropyProof?.explorerUrl,
-                timestamp: entropyResult.entropyProof?.timestamp,
-                source: 'Pyth Entropy'
+                timestamp: entropyResult.entropyProof?.timestamp
               }
-            }
-          : item
-      ));
+            })
+          });
+          
+          const pushResult = await pushResponse.json();
+          console.log('🔗 Push Chain logging result (Wheel):', pushResult);
+          console.log('🔗 Push Chain TX Hash:', pushResult.transactionHash);
+          console.log('🔗 Push Chain Explorer URL:', pushResult.pushChainExplorerUrl);
+
+          // Log to Solana as well
+          const solanaResponse = await fetch('/api/log-to-solana', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              gameType: 'WHEEL',
+              gameResult: {
+                multiplier: targetHistoryItem.multiplier,
+                payout: targetHistoryItem.payout,
+                segments: targetHistoryItem.segments || 'unknown'
+              },
+              playerAddress: 'unknown', // Will be updated when wallet integration is available
+              betAmount: targetHistoryItem.betAmount || 0,
+              payout: targetHistoryItem.payout || 0,
+              entropyProof: {
+                requestId: entropyResult.entropyProof?.requestId,
+                sequenceNumber: entropyResult.entropyProof?.sequenceNumber,
+                randomValue: entropyResult.randomValue,
+                transactionHash: entropyResult.entropyProof?.transactionHash,
+                timestamp: entropyResult.entropyProof?.timestamp
+              }
+            })
+          });
+          
+          const solanaResult = await solanaResponse.json();
+          console.log('🔗 Solana logging result (Wheel):', solanaResult);
+          console.log('🔗 Solana TX Signature:', solanaResult.transactionSignature);
+          console.log('🔗 Solana Explorer URL:', solanaResult.solanaExplorerUrl);
+          
+          // Update the history item with real entropy proof, Push Chain and Solana info
+          console.log('🔄 Updating history item with ID:', historyItemId);
+          setGameHistory(prev => {
+            const updated = prev.map(item => 
+              item.id === historyItemId 
+                ? {
+                    ...item,
+                    entropyProof: {
+                      requestId: entropyResult.entropyProof?.requestId,
+                      sequenceNumber: entropyResult.entropyProof?.sequenceNumber,
+                      randomValue: entropyResult.randomValue,
+                      randomNumber: entropyResult.randomValue,
+                      transactionHash: entropyResult.entropyProof?.transactionHash,
+                      monadExplorerUrl: entropyResult.entropyProof?.monadExplorerUrl,
+                      explorerUrl: entropyResult.entropyProof?.explorerUrl,
+                      timestamp: entropyResult.entropyProof?.timestamp,
+                      source: 'Pyth Entropy',
+                      pushChainTxHash: pushResult.success ? pushResult.transactionHash : null,
+                      pushChainExplorerUrl: pushResult.success ? pushResult.pushChainExplorerUrl : null,
+                      solanaTxSignature: solanaResult.success ? solanaResult.transactionSignature : null,
+                      solanaExplorerUrl: solanaResult.success ? solanaResult.solanaExplorerUrl : null
+                    }
+                  }
+                : item
+            );
+            console.log('✅ History updated successfully');
+            return updated;
+          });
+        } catch (error) {
+          console.error('❌ Push Chain logging failed (Wheel):', error);
+          
+          // Update the history item with entropy proof only
+          console.log('🔄 Updating history item (entropy only) with ID:', historyItemId);
+          setGameHistory(prev => {
+            const updated = prev.map(item => 
+              item.id === historyItemId 
+                ? {
+                    ...item,
+                    entropyProof: {
+                      requestId: entropyResult.entropyProof?.requestId,
+                      sequenceNumber: entropyResult.entropyProof?.sequenceNumber,
+                      randomValue: entropyResult.randomValue,
+                      randomNumber: entropyResult.randomValue,
+                      transactionHash: entropyResult.entropyProof?.transactionHash,
+                      monadExplorerUrl: entropyResult.entropyProof?.monadExplorerUrl,
+                      explorerUrl: entropyResult.entropyProof?.explorerUrl,
+                      timestamp: entropyResult.entropyProof?.timestamp,
+                      source: 'Pyth Entropy'
+                    }
+                  }
+                : item
+            );
+            console.log('✅ History updated successfully (entropy only)');
+            return updated;
+          });
+        }
+      }
       
       // Log on-chain via casino wallet (non-blocking)
       try {
@@ -136,7 +240,7 @@ export default function Home() {
             sessionId: entropyResult.entropyProof?.requestId || `wheel_${Date.now()}`,
             gameType: 'WHEEL',
             channelId: entropyResult.entropyProof?.requestId || 'entropy_channel',
-            valueOg: 0
+            valueMon: 0
           })
         })
           .then(async (r) => {
@@ -153,11 +257,11 @@ export default function Home() {
     }
   };
 
-    // Check Redux balance (balance is already in STX)
+    // Check Redux balance (balance is already in PC)
     const currentBalance = parseFloat(userBalance || '0');
     
     if (currentBalance < betAmount) {
-      alert(`Insufficient balance. You have ${currentBalance.toFixed(5)} STX but need ${betAmount} STX`);
+      alert(`Insufficient balance. You have ${currentBalance.toFixed(5)} PC but need ${betAmount} PC`);
       return;
     }
 
@@ -174,7 +278,7 @@ export default function Home() {
       const newBalance = (parseFloat(userBalance || '0') - betAmount).toString();
       dispatch(setBalance(newBalance));
       
-      console.log('Balance deducted. New balance:', parseFloat(newBalance).toFixed(5), 'STX');
+      console.log('balance PC');
       
       // Set up callback to handle wheel animation completion
       window.wheelBetCallback = async (landedMultiplier) => {
@@ -225,37 +329,12 @@ export default function Home() {
             randomValue: Math.floor(Math.random() * 1000000),
             randomNumber: Math.floor(Math.random() * 1000000),
             transactionHash: 'generating...',
-            arbiscanUrl: 'https://sepolia.arbiscan.io/',
+            monadExplorerUrl: 'https://testnet.monadexplorer.com/',
             explorerUrl: 'https://entropy-explorer.pyth.network/?chain=arbitrum-sepolia',
             timestamp: Date.now(),
             source: 'Generating...'
           };
 
-          // Save game result with Stacks logging
-          try {
-            const saveResult = await saveGameResult({
-              vrfRequestId: 'wheel_' + Date.now(),
-              userAddress: 'anonymous',
-              gameType: 'WHEEL',
-              gameConfig: { riskLevel: risk },
-              resultData: {
-                multiplier: actualMultiplier,
-                color: detectedColor
-              },
-              betAmount: betAmount,
-              payoutAmount: winAmount,
-              entropyProof: newHistoryItem.entropyProof
-            });
-            
-            // Add Stacks transaction info to the history item
-            if (saveResult?.stacksLogResult?.txId) {
-              newHistoryItem.stacksTxId = saveResult.stacksLogResult.txId;
-              newHistoryItem.stacksExplorerUrl = saveResult.stacksLogResult.stacksExplorerUrl;
-            }
-          } catch (saveError) {
-            console.warn('⚠️ Failed to save wheel game result:', saveError);
-          }
-          
           setGameHistory(prev => [newHistoryItem, ...prev]);
           
           setIsSpinning(false);
@@ -263,7 +342,7 @@ export default function Home() {
           
           // Show result and update balance immediately
           if (actualMultiplier > 0) {
-            notification.success(`Congratulations! ${betAmount} STX × ${actualMultiplier.toFixed(2)} = ${winAmount.toFixed(5)} STX won!`);
+            notification.success(`Congratulations! ${betAmount} PC × ${actualMultiplier.toFixed(2)} = ${winAmount.toFixed(5)} PC won!`);
             
             // Update balance with winnings
             const currentBalance = parseFloat(userBalance || '0');
@@ -281,7 +360,7 @@ export default function Home() {
           }
 
           // Generate Pyth Entropy in background for provably fair proof
-          generateEntropyInBackground(newHistoryItem.id).catch(error => {
+          generateEntropyInBackground(newHistoryItem.id, newHistoryItem).catch(error => {
             console.error('❌ Background entropy generation failed:', error);
           });
           
@@ -355,7 +434,7 @@ export default function Home() {
       });
       
       if (currentBalance < currentBet) {
-        alert(`Insufficient balance for bet ${i + 1}. Need ${currentBet.toFixed(5)} STX but have ${currentBalance.toFixed(5)} STX`);
+        alert(`Insufficient balance for bet ${i + 1}. Need ${currentBet.toFixed(5)} PC but have ${currentBalance.toFixed(5)} PC`);
         break;
       }
 
@@ -458,7 +537,7 @@ export default function Home() {
       
       // Show notification for win
       if (actualMultiplier > 0) {
-        notification.success(`Congratulations! ${currentBet} STX × ${actualMultiplier.toFixed(2)} = ${winAmount.toFixed(8)} STX won!`);
+        notification.success(`Congratulations! ${currentBet} PC × ${actualMultiplier.toFixed(2)} = ${winAmount.toFixed(8)} PC won!`);
       }
 
       // Store history entry
@@ -530,8 +609,8 @@ export default function Home() {
     // Sample statistics
     const gameStatistics = {
       totalBets: '1,856,342',
-      totalVolume: '8.3M STX',
-      maxWin: '243,500 STX'
+      totalVolume: '8.3M PC',
+      maxWin: '243,500 PC'
     };
     
     return (
@@ -708,7 +787,7 @@ export default function Home() {
               setGameMode={setGameMode}
               betAmount={betAmount}
               setBetAmount={setBetAmount}
-              balance={parseFloat(userBalance || '0')} // Balance is already in STX
+              balance={parseFloat(userBalance || '0')}
               manulBet={manulBet}
               risk={selectedRisk}
               setRisk={setSelectedRisk}

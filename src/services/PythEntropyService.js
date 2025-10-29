@@ -121,6 +121,12 @@ class PythEntropyService {
         })
       });
       
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ PYTH ENTROPY: HTTP error:', response.status, errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      
       const result = await response.json();
       
       if (!result.success) {
@@ -140,7 +146,7 @@ class PythEntropyService {
         gameConfig: gameConfig,
         metadata: {
           source: 'Pyth Entropy (API)',
-          network: 'arbitrum-sepolia',
+          network: 'push-chain-donut',
           algorithm: 'pyth-entropy-hardhat',
           generatedAt: new Date().toISOString()
         }
@@ -167,9 +173,9 @@ class PythEntropyService {
           transactionHash: 'fallback_no_tx',
           blockNumber: null,
           randomValue: Math.floor(Math.random() * 1000000),
-          network: 'arbitrum-sepolia',
-          explorerUrl: 'https://entropy-explorer.pyth.network/?chain=arbitrum-sepolia',
-          arbiscanUrl: 'https://sepolia.arbiscan.io/',
+          network: 'push-chain-donut',
+          explorerUrl: 'https://entropy-explorer.pyth.network/?chain=push-chain-donut',
+          pushChainExplorerUrl: 'https://donut.push.network/',
           timestamp: Date.now(),
           source: 'Pyth Entropy (API Fallback)'
         },
@@ -178,7 +184,7 @@ class PythEntropyService {
         gameConfig: gameConfig,
         metadata: {
           source: 'Pyth Entropy (Fallback)',
-          network: 'arbitrum-sepolia',
+          network: 'push-chain-donut',
           algorithm: 'fallback',
           generatedAt: new Date().toISOString()
         }
@@ -187,20 +193,18 @@ class PythEntropyService {
   }
 
   /**
-   * Get Arbiscan URL for transaction
+   * Get Push Chain Explorer URL for transaction
    * @param {string} txHash - Transaction hash
-   * @returns {string} Arbiscan URL
+   * @returns {string} Push Chain Explorer URL
    */
-  getArbiscanUrl(txHash) {
-    const network = this.network || 'arbitrum-sepolia';
+  getPushChainExplorerUrl(txHash) {
+    const network = this.network || 'push-chain-donut';
     
-    if (network === 'arbitrum-sepolia') {
-      return `https://sepolia.arbiscan.io/tx/${txHash}`;
-    } else if (network === 'arbitrum-one') {
-      return `https://arbiscan.io/tx/${txHash}`;
+    if (network === 'push-chain-donut') {
+      return `https://donut.push.network/tx/${txHash}`;
     }
     
-    return `https://sepolia.etherscan.io/tx/${txHash}`;
+    return `https://donut.push.network/tx/${txHash}`;
   }
 
   /**

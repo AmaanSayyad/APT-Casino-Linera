@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef } from 'react';
-import { useAccount, useConnect } from 'wagmi';
+import { usePushWalletContext, usePushChainClient, PushUI } from '@pushchain/ui-kit';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 /**
@@ -8,17 +8,15 @@ import { useRouter, useSearchParams } from 'next/navigation';
  * Handles wallet persistence in Vercel's edge runtime environment
  */
 export const useVercelWalletPersistence = () => {
-  const { isConnected, address } = useAccount();
-  const connectHook = useConnect();
+  const { connectionStatus } = usePushWalletContext();
+  const { pushChainClient } = usePushChainClient();
+  const isConnected = connectionStatus === PushUI.CONSTANTS.CONNECTION.STATUS.CONNECTED;
+  const address = pushChainClient?.universal?.account || null;
   const router = useRouter();
   const searchParams = useSearchParams();
   const reconnectAttempted = useRef(false);
   const reconnectTimeout = useRef(null);
   const lastPageCheck = useRef(0);
-
-  // Safely extract connect and connectors
-  const connect = connectHook?.connect;
-  const connectors = connectHook?.connectors || [];
 
   // Global state for Vercel
   const globalState = useRef({
@@ -51,11 +49,12 @@ export const useVercelWalletPersistence = () => {
     const checkAndReconnect = () => {
       const currentTime = Date.now();
       
-      console.log('🌐 Vercel wallet check:', {
+      console.log('🌐 Vercel Push Universal Wallet check:', {
+        connectionStatus,
         isConnected,
         address,
         globalState: globalState.current,
-        connectorsCount: connectors.length,
+        pushChainClient: !!pushChainClient,
         reconnectAttempted: reconnectAttempted.current,
         timeSinceLastCheck: currentTime - lastPageCheck.current,
         windowDefined: typeof window !== 'undefined'
@@ -64,56 +63,27 @@ export const useVercelWalletPersistence = () => {
       // Update last check time
       lastPageCheck.current = currentTime;
 
-      // More aggressive reconnection for Vercel
-      // Always try to reconnect if wallet is not connected and connectors are available
+      // Push Universal Wallet handles reconnection automatically
+      // We just monitor the state
       const shouldReconnect = 
         !isConnected && 
-        connectors.length > 0 && 
         typeof window !== 'undefined' &&
-        !reconnectAttempted.current &&
-        connect &&
-        typeof connect === 'function';
+        !reconnectAttempted.current;
 
       if (shouldReconnect) {
-        console.log('🔄 Vercel wallet persistence: Attempting reconnection...');
+        console.log('🔄 Vercel Push Universal Wallet: Monitoring connection...');
         reconnectAttempted.current = true;
 
-        // Find MetaMask connector
-        const metaMaskConnector = connectors.find(c => 
-          c.id === 'metaMask' || 
-          c.name.toLowerCase().includes('metamask') ||
-          c.id === 'injected'
-        );
-
-        if (metaMaskConnector && connect) {
-          console.log('🔗 Reconnecting with connector:', metaMaskConnector.name);
-          try {
-            const connectResult = connect({ connector: metaMaskConnector });
-            if (connectResult && typeof connectResult.then === 'function') {
-              connectResult
-                .then(() => {
-                  console.log('✅ Vercel wallet reconnection successful');
-                  reconnectAttempted.current = false;
-                })
-                .catch((error) => {
-                  console.error('❌ Vercel wallet reconnection failed:', error);
-                  // Reset after a delay to allow retry
-                  setTimeout(() => {
-                    reconnectAttempted.current = false;
-                  }, 5000);
-                });
-            } else {
-              console.log('⚠️ Connect function did not return a promise');
-              reconnectAttempted.current = false;
-            }
-          } catch (error) {
-            console.error('❌ Vercel wallet reconnection error:', error);
+        // Push Universal Wallet handles reconnection internally
+        setTimeout(() => {
+          if (!isConnected) {
+            console.log('❌ Push Universal Wallet reconnection timeout');
+            reconnectAttempted.current = false;
+          } else {
+            console.log('✅ Push Universal Wallet reconnection successful');
             reconnectAttempted.current = false;
           }
-        } else {
-          console.log('❌ No suitable connector found for Vercel reconnection or connect function unavailable');
-          reconnectAttempted.current = false;
-        }
+        }, 5000);
       }
     };
 
@@ -126,7 +96,7 @@ export const useVercelWalletPersistence = () => {
         clearTimeout(reconnectTimeout.current);
       }
     };
-  }, [isConnected, address, connect, connectors]);
+  }, [isConnected, address, connectionStatus, pushChainClient]);
 
   // Handle page navigation
   useEffect(() => {
@@ -136,40 +106,15 @@ export const useVercelWalletPersistence = () => {
       // Reset reconnection flag on page navigation
       reconnectAttempted.current = false;
       
-      // If we have a global state but wallet is not connected, try to reconnect
-      if (globalState.current.isConnected && !isConnected && connectors.length > 0 && connect && typeof connect === 'function') {
-        console.log('🔄 Page navigation: Attempting reconnection...');
-        
-        const metaMaskConnector = connectors.find(c => 
-          c.id === 'metaMask' || 
-          c.name.toLowerCase().includes('metamask') ||
-          c.id === 'injected'
-        );
-
-        if (metaMaskConnector) {
-          try {
-            const connectResult = connect({ connector: metaMaskConnector });
-            if (connectResult && typeof connectResult.then === 'function') {
-              connectResult
-                .then(() => {
-                  console.log('✅ Page navigation reconnection successful');
-                })
-                .catch((error) => {
-                  console.error('❌ Page navigation reconnection failed:', error);
-                });
-            } else {
-              console.log('⚠️ Page navigation: Connect function did not return a promise');
-            }
-          } catch (error) {
-            console.error('❌ Page navigation reconnection error:', error);
-          }
-        }
+      // Push Universal Wallet handles page navigation automatically
+      if (globalState.current.isConnected && !isConnected) {
+        console.log('🔄 Page navigation: Push Universal Wallet will handle reconnection...');
       }
     };
 
     // Run on every page load
     handlePageNavigation();
-  }, [isConnected, connect, connectors]);
+  }, [isConnected, connectionStatus, pushChainClient]);
 
   return {
     isConnected,

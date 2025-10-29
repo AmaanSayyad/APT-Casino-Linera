@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { useAccount } from 'wagmi';
+import { usePushWalletContext, usePushChainClient, PushUI } from '@pushchain/ui-kit';
 import GameHistoryList from '@/components/GameHistory/GameHistoryList';
 
 /**
@@ -8,7 +8,10 @@ import GameHistoryList from '@/components/GameHistory/GameHistoryList';
  * Shows user's complete gaming history with VRF verification
  */
 const HistoryPage = () => {
-  const { address, isConnected } = useAccount();
+  const { connectionStatus } = usePushWalletContext();
+  const { pushChainClient } = usePushChainClient();
+  const isConnected = connectionStatus === PushUI.CONSTANTS.CONNECTION.STATUS.CONNECTED;
+  const address = pushChainClient?.universal?.account || null;
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -4,10 +4,13 @@ import React, { useState } from 'react';
 import { AppBar, Toolbar, Container, Box, Button, Typography } from '@mui/material';
 import { Zap } from 'lucide-react';
 import NetworkSwitcher from './NetworkSwitcher';
-import { useStacksWallet } from '@/contexts/StacksWalletContext';
+import { usePushWalletContext, usePushChainClient, PushUI } from '@pushchain/ui-kit';
 
 const Navbar = () => {
-  const { address, isConnected } = useStacksWallet();
+  const { connectionStatus } = usePushWalletContext();
+  const { pushChainClient } = usePushChainClient();
+  const isConnected = connectionStatus === PushUI.CONSTANTS.CONNECTION.STATUS.CONNECTED;
+  const address = pushChainClient?.universal?.account || null;
   const [showVRFModal] = useState(false); // Placeholder retained to avoid layout changes
 
   return (

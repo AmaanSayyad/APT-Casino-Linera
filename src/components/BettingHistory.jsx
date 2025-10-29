@@ -4,17 +4,15 @@ import { Box, Typography, Paper, Chip, IconButton, Tooltip } from '@mui/material
 import { OpenInNew, Verified, Security } from '@mui/icons-material';
 
 const BettingHistory = ({ history }) => {
-  const openArbiscan = (txHash) => {
+  const openMonadExplorer = (txHash) => {
     if (txHash) {
-      const network = process.env.NEXT_PUBLIC_NETWORK || 'arbitrum-sepolia';
+      const network = process.env.NEXT_PUBLIC_NETWORK || 'monad-testnet';
       let explorerUrl;
       
-      if (network === 'arbitrum-sepolia') {
-        explorerUrl = `https://sepolia.arbiscan.io/tx/${txHash}`;
-      } else if (network === 'arbitrum-one') {
-        explorerUrl = `https://arbiscan.io/tx/${txHash}`;
+      if (network === 'monad-testnet') {
+        explorerUrl = `https://testnet.monadexplorer.com/tx/${txHash}`;
       } else {
-        explorerUrl = `https://sepolia.etherscan.io/tx/${txHash}`;
+        explorerUrl = `https://testnet.monadexplorer.com/tx/${txHash}`;
       }
       
       window.open(explorerUrl, '_blank');
@@ -79,7 +77,7 @@ const BettingHistory = ({ history }) => {
                 {bet.type}
               </Typography>
               <Typography variant="body1" color="text.primary">
-                {bet.amount} STX
+                {bet.amount} MON
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 {new Date(bet.timestamp).toLocaleTimeString()}
@@ -91,7 +89,7 @@ const BettingHistory = ({ history }) => {
                 fontWeight="bold"
                 color={bet.won ? 'success.main' : 'error.main'}
               >
-                {bet.won ? '+' : '-'}{bet.payout} STX
+                {bet.won ? '+' : '-'}{bet.payout} MON
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', mt: 0.5 }}>
                 <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>
@@ -117,7 +115,7 @@ const BettingHistory = ({ history }) => {
                         transform: bet.vrfDetails?.transactionHash ? 'scale(1.1)' : 'none'
                       }
                     }}
-                    onClick={() => bet.vrfDetails?.transactionHash && openArbiscan(bet.vrfDetails.transactionHash)}
+                    onClick={() => bet.vrfDetails?.transactionHash && openMonadExplorer(bet.vrfDetails.transactionHash)}
                   >
                     {bet.roll}
                     {bet.vrfDetails?.transactionHash && (
@@ -148,14 +146,14 @@ const BettingHistory = ({ history }) => {
                   <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>
                     VRF:
                   </Typography>
-                  <Tooltip title="Click to verify on Arbiscan">
+                  <Tooltip title="Click to verify on Monad Explorer">
                     <Chip
                       label={formatTxHash(bet.vrfDetails.transactionHash)}
                       size="small"
                       variant="outlined"
                       color="success"
                       icon={<Verified />}
-                      onClick={() => openArbiscan(bet.vrfDetails.transactionHash)}
+                      onClick={() => openMonadExplorer(bet.vrfDetails.transactionHash)}
                       sx={{ 
                         fontSize: '0.6rem', 
                         height: 20,

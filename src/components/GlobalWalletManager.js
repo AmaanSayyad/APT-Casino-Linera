@@ -1,22 +1,25 @@
 "use client";
 import React from 'react';
-import { useStacksWallet } from '@/contexts/StacksWalletContext';
+import { useVercelWalletPersistence } from '@/hooks/useVercelWalletPersistence';
 
 /**
- * Global Wallet Manager for Stacks
- * This component manages Stacks wallet state globally
+ * Global Wallet Manager
+ * This component should be included in every page to ensure wallet persistence
+ * Uses Vercel-specific persistence for better compatibility
  */
 export default function GlobalWalletManager() {
-  const { isConnected, address, balance } = useStacksWallet();
+  // Use Vercel-specific wallet persistence
+  const { isConnected, address, isReconnecting, globalState } = useVercelWalletPersistence();
   
   // Debug logging
   React.useEffect(() => {
-    console.log('🔧 GlobalWalletManager (Stacks) state:', {
+    console.log('🔧 GlobalWalletManager state:', {
       isConnected,
       address,
-      balance
+      isReconnecting,
+      globalState
     });
-  }, [isConnected, address, balance]);
+  }, [isConnected, address, isReconnecting, globalState]);
   
   // This component doesn't render anything, it just manages wallet state
   return null;

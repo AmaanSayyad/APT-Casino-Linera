@@ -10,20 +10,20 @@ export default function FeatureSection() {
   const features = [
     {
       id: 1,
-      title: "Transparent & Provably Fair",
-      description: "All games use verifiable on-chain randomness through our Pyth Entropy, ensuring complete transparency and fairness in every outcome.",
+      title: "On-Chain Randomness",
+      description: "Leveraging Push Chain's secure infrastructure with Pyth Entropy for verifiable on-chain randomness, ensuring complete transparency and fairness in every game outcome.",
       icon: "🎲"
     },
     {
       id: 2,
-      title: "Cross-Chain Liquidity",
-      description: "Stake tokens across multiple chains to earn STX tokens while playing your favorite games with minimal slippage.",
+      title: "Push Protocol Integration",
+      description: "Utilizing Push Chain's native communication for real-time notifications, game updates, and secure cross-chain messaging with minimal latency.",
       icon: "⛓️"
     },
     {
       id: 3,
-      title: "No Restrictions",
-      description: "Enjoy flexible withdrawals, transparent bonus schemes, and full control over your assets through decentralized management.",
+      title: "Push Chain Security",
+      description: "Built on Push Chain's robust security model with decentralized consensus, ensuring your assets remain secure while maintaining full control through non-custodial smart contracts.",
       icon: "🔓"
     }
   ];
@@ -127,8 +127,9 @@ export default function FeatureSection() {
               </div>
               
               <p className="text-white/80 text-sm">
-                APT-Casino leverages Stacks Blockchain to provide a transparent, provably fair gaming
-                experience with DeFi integration, allowing players to earn passive income through staking.
+                APT-Casino leverages Push Chain's advanced blockchain infrastructure to provide a transparent, provably fair gaming
+                experience with DeFi integration. Push Chain's high throughput, low latency, and EVM compatibility enable
+                seamless gaming experiences with verifiable randomness and secure transactions.
               </p>
             </div>
           </div>

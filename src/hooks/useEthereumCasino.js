@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount } from 'wagmi';
+import { usePushWalletContext, usePushChainClient, PushUI } from '@pushchain/ui-kit';
 
 // Mock functions for demo purposes
 const ethereumClient = {
@@ -19,7 +19,7 @@ const ethereumClient = {
   }
 };
 
-const CASINO_MODULE_ADDRESS = "0x1234567890123456789012345678901234567890123456789012345678901234";
+const CASINO_MODULE_ADDRESS = process.env.NEXT_PUBLIC_CASINO_MODULE_ADDRESS || "0x0000000000000000000000000000000000000000";
 
 const formatEthAmount = (amount) => {
   // Mock formatting for demo
@@ -74,7 +74,10 @@ const CasinoGames = {
 };
 
 export const useEthereumCasino = () => {
-  const { address: account, isConnected: connected } = useAccount();
+  const { connectionStatus } = usePushWalletContext();
+  const { pushChainClient } = usePushChainClient();
+  const connected = connectionStatus === PushUI.CONSTANTS.CONNECTION.STATUS.CONNECTED;
+  const account = pushChainClient?.universal?.account || null;
   const [balance, setBalance] = useState('0');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);

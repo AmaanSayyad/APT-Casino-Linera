@@ -14,7 +14,6 @@ import { Typography } from "@mui/material";
 import { GiRollingDices, GiCardRandom, GiPokerHand } from "react-icons/gi";
 import { FaPercentage, FaBalanceScale, FaChartLine, FaCoins, FaTrophy, FaPlay, FaExternalLinkAlt } from "react-icons/fa";
 import pythEntropyService from '../../../services/PythEntropyService';
-import { saveGameResult } from '@/utils/gameHistory';
 
 export default function Plinko() {
   const userBalance = useSelector((state) => state.balance.userBalance);
@@ -52,8 +51,8 @@ export default function Plinko() {
   const PlinkoHeader = () => {
     const gameStatistics = {
       totalBets: '1,234,567',
-      totalVolume: '5.2M STX',
-      maxWin: '120,000 STX'
+      totalVolume: '5.2M PC',
+      maxWin: '120,000 PC'
     };
     return (
       <div className="relative text-white px-4 md:px-8 lg:px-20 mb-8 pt-28 md:pt-32 lg:pt-36 mt-6">
@@ -188,7 +187,7 @@ export default function Plinko() {
   };
 
   const handleBet = () => {
-    // Trigger the ball dropping animation in PlinkoGame. Balance and bet validity are checked inside PlinkoGame
+    // Trigger the ball dropping animation in PlinkoGame. balance PCName
     console.log('Main page handleBet called');
     if (plinkoGameRef.current && plinkoGameRef.current.dropBall) {
       plinkoGameRef.current.dropBall();
@@ -220,34 +219,73 @@ export default function Plinko() {
         timestamp: new Date().toISOString()
       };
       
-      console.log('📝 Enhanced bet result:', enhancedBetResult);
-      
-      // Save game result with both Pyth and Stacks logging
+      // Log game result to Push Chain
       try {
-        const saveResult = await saveGameResult({
-          vrfRequestId: randomData.entropyProof?.requestId,
-          userAddress: 'anonymous', // We don't have user address in Plinko
-          gameType: 'PLINKO',
-          gameConfig: { rows: currentRows, riskLevel: currentRiskLevel },
-          resultData: {
-            ballPath: enhancedBetResult.ballPath,
-            finalSlot: enhancedBetResult.finalSlot,
-            multiplier: enhancedBetResult.multiplier
+        const pushResponse = await fetch('/api/log-to-push', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-          betAmount: currentBetAmount,
-          payoutAmount: enhancedBetResult.payout,
-          entropyProof: enhancedBetResult.entropyProof
+          body: JSON.stringify({
+            gameType: 'PLINKO',
+            gameResult: {
+              multiplier: newBetResult.multiplier,
+              payout: newBetResult.payout,
+              rows: currentRows,
+              riskLevel: currentRiskLevel
+            },
+            playerAddress: 'unknown', // Will be updated when wallet integration is available
+            betAmount: newBetResult.betAmount || 0,
+            payout: newBetResult.payout || 0,
+            entropyProof: enhancedBetResult.entropyProof
+          })
         });
         
-        // Add Stacks transaction info to the bet result
-        if (saveResult?.stacksLogResult?.txId) {
-          enhancedBetResult.stacksTxId = saveResult.stacksLogResult.txId;
-          enhancedBetResult.stacksExplorerUrl = saveResult.stacksLogResult.stacksExplorerUrl;
+        const pushResult = await pushResponse.json();
+        console.log('🔗 Push Chain logging result (Plinko):', pushResult);
+        
+        if (pushResult.success) {
+          enhancedBetResult.entropyProof.pushChainTxHash = pushResult.transactionHash;
+          enhancedBetResult.entropyProof.pushChainExplorerUrl = pushResult.pushChainExplorerUrl;
         }
-      } catch (saveError) {
-        console.warn('⚠️ Failed to save game result:', saveError);
+      } catch (error) {
+        console.error('❌ Push Chain logging failed (Plinko):', error);
+      }
+
+      // Log game result to Solana
+      try {
+        const solanaResponse = await fetch('/api/log-to-solana', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            gameType: 'PLINKO',
+            gameResult: {
+              multiplier: newBetResult.multiplier,
+              payout: newBetResult.payout,
+              rows: newBetResult.rows || 'unknown',
+              riskLevel: newBetResult.riskLevel || 'unknown'
+            },
+            playerAddress: 'unknown', // Will be updated when wallet integration is available
+            betAmount: newBetResult.betAmount || 0,
+            payout: newBetResult.payout || 0,
+            entropyProof: enhancedBetResult.entropyProof
+          })
+        });
+        
+        const solanaResult = await solanaResponse.json();
+        console.log('🔗 Solana logging result (Plinko):', solanaResult);
+        
+        if (solanaResult.success) {
+          enhancedBetResult.entropyProof.solanaTxSignature = solanaResult.transactionSignature;
+          enhancedBetResult.entropyProof.solanaExplorerUrl = solanaResult.solanaExplorerUrl;
+        }
+      } catch (error) {
+        console.error('❌ Solana logging failed (Plinko):', error);
       }
       
+      console.log('📝 Enhanced bet result:', enhancedBetResult);
       setGameHistory(prev => [enhancedBetResult, ...prev].slice(0, 100)); // Keep up to last 100 entries
       
     } catch (error) {

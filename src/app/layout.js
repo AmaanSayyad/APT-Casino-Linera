@@ -4,6 +4,7 @@ import Providers from "./providers";
 import Navbar from "@/components/Navbar.js";
 import Footer from "@/components/Footer";
 import GlobalWalletManager from "@/components/GlobalWalletManager";
+import NetworkSwitcher from "@/components/NetworkSwitcher";
 
 
 const inter = Inter({ subsets: ["latin"] });
@@ -38,6 +39,7 @@ export default function RootLayout({ children }) {
       >
         <Providers>
           <GlobalWalletManager />
+          <NetworkSwitcher />
           <Navbar />
           {children}
           <Footer />

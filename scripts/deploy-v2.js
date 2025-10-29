@@ -11,6 +11,7 @@ async function main() {
   // Pyth Entropy contract addresses
   const PYTH_ENTROPY_ADDRESSES = {
     'arbitrum-sepolia': '0x549ebba8036ab746611b4ffa1423eb0a4df61440', // Official Pyth Entropy contract
+    'push-chain-donut': '0x36825bf3fbdf5a29e2d5148bfe7dcf7b5639e320', // Push Chain Donut Testnet Pyth Entropy contract
   };
 
   const network = await ethers.provider.getNetwork();

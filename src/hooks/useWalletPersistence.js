@@ -1,14 +1,15 @@
 import { useEffect } from 'react';
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { usePushWalletContext, usePushChainClient, PushUI } from '@pushchain/ui-kit';
 
 /**
  * Hook to handle wallet connection persistence
  * Automatically reconnects wallet on page refresh/navigation
  */
 export const useWalletPersistence = () => {
-  const { isConnected, address } = useAccount();
-  const { connect, connectors } = useConnect();
-  const { disconnect } = useDisconnect();
+  const { connectionStatus } = usePushWalletContext();
+  const { pushChainClient } = usePushChainClient();
+  const isConnected = connectionStatus === PushUI.CONSTANTS.CONNECTION.STATUS.CONNECTED;
+  const address = pushChainClient?.universal?.account || null;
 
   useEffect(() => {
     // Add a small delay to ensure connectors are ready

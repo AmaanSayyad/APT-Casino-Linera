@@ -13,6 +13,16 @@ export default function GameHistory({ history }) {
     }
   };
 
+  // Open Monad Explorer link (fallback mechanism for demo)
+  const openMonadExplorer = (txHash) => {
+    if (txHash) {
+      // For demo purposes, we're using the Push Chain explorer but keeping the function name
+      // This simulates the fallback mechanism that was in place for Monad
+      const monadExplorerUrl = `https://donut.push.network/tx/${txHash}`;
+      window.open(monadExplorerUrl, '_blank');
+    }
+  };
+
   // Open Arbiscan link for transaction hash
   const openArbiscan = (hash) => {
     if (hash && hash !== 'unknown') {
@@ -28,14 +38,6 @@ export default function GameHistory({ history }) {
       }
       
       window.open(explorerUrl, '_blank');
-    }
-  };
-
-  // Open Stacks Explorer link
-  const openStacksExplorer = (txId) => {
-    if (txId) {
-      const stacksExplorerUrl = `https://explorer.stacks.co/txid/${txId}?chain=testnet`;
-      window.open(stacksExplorerUrl, '_blank');
     }
   };
   
@@ -75,7 +77,7 @@ export default function GameHistory({ history }) {
                 Payout
               </th>
               <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">
-                Blockchain Proofs
+                Entropy Explorer
               </th>
             </tr>
           </thead>
@@ -115,14 +117,32 @@ export default function GameHistory({ history }) {
                         <div className="text-xs text-gray-300 font-mono">
                           <div className="text-yellow-400 font-bold">{game.entropyProof.sequenceNumber && game.entropyProof.sequenceNumber !== '0' ? String(game.entropyProof.sequenceNumber) : ''}</div>
                         </div>
-                        <div className="flex flex-wrap gap-1">
-                          {game.entropyProof.arbiscanUrl && (
+                        <div className="flex gap-1">
+                          {(game.entropyProof.monadExplorerUrl || game.entropyProof.transactionHash || game.entropyProof.pushChainTxHash) && (
                             <button
-                              onClick={() => window.open(game.entropyProof.arbiscanUrl, '_blank')}
-                              className="flex items-center gap-1 px-2 py-1 bg-blue-500/10 border border-blue-500/30 rounded text-blue-400 text-xs hover:bg-blue-500/20 transition-colors"
+                              onClick={() => {
+                                const url = game.entropyProof.monadExplorerUrl || 
+                                           game.entropyProof.pushChainExplorerUrl ||
+                                           `https://donut.push.network/tx/${game.entropyProof.transactionHash || game.entropyProof.pushChainTxHash}`;
+                                window.open(url, '_blank');
+                              }}
+                              className="flex items-center gap-1 px-2 py-1 bg-[#8B2398]/10 border border-[#8B2398]/30 rounded text-[#8B2398] text-xs hover:bg-[#8B2398]/20 transition-colors"
                             >
                               <FaExternalLinkAlt size={8} />
-                              Arbitrum
+                              Push
+                            </button>
+                          )}
+                          {(game.entropyProof.solanaExplorerUrl || game.solanaTxSignature) && (
+                            <button
+                              onClick={() => {
+                                const url = game.entropyProof.solanaExplorerUrl || 
+                                           `https://explorer.solana.com/tx/${game.solanaTxSignature}?cluster=testnet`;
+                                window.open(url, '_blank');
+                              }}
+                              className="flex items-center gap-1 px-2 py-1 bg-[#14D854]/10 border border-[#14D854]/30 rounded text-[#14D854] text-xs hover:bg-[#14D854]/20 transition-colors"
+                            >
+                              <FaExternalLinkAlt size={8} />
+                              Solana
                             </button>
                           )}
                           {game.entropyProof.transactionHash && (
@@ -131,16 +151,7 @@ export default function GameHistory({ history }) {
                               className="flex items-center gap-1 px-2 py-1 bg-[#681DDB]/10 border border-[#681DDB]/30 rounded text-[#681DDB] text-xs hover:bg-[#681DDB]/20 transition-colors"
                             >
                               <FaExternalLinkAlt size={8} />
-                              Pyth
-                            </button>
-                          )}
-                          {game.stacksTxId && (
-                            <button
-                              onClick={() => openStacksExplorer(game.stacksTxId)}
-                              className="flex items-center gap-1 px-2 py-1 bg-orange-500/10 border border-orange-500/30 rounded text-orange-400 text-xs hover:bg-orange-500/20 transition-colors"
-                            >
-                              <FaExternalLinkAlt size={8} />
-                              Stacks
+                              Entropy
                             </button>
                           )}
                         </div>
@@ -160,6 +171,23 @@ export default function GameHistory({ history }) {
                         >
                           <FaExternalLinkAlt size={8} />
                           Entropy
+                        </button>
+                        <button
+                          onClick={() => openMonadExplorer(game.id)}
+                          className="flex items-center gap-1 px-2 py-1 bg-[#8B2398]/10 border border-[#8B2398]/30 rounded text-[#8B2398] text-xs hover:bg-[#8B2398]/20 transition-colors"
+                        >
+                          <FaExternalLinkAlt size={8} />
+                          Push
+                        </button>
+                        <button
+                          onClick={() => {
+                            const url = `https://explorer.solana.com/tx/${game.id}?cluster=testnet`;
+                            window.open(url, '_blank');
+                          }}
+                          className="flex items-center gap-1 px-2 py-1 bg-[#14D854]/10 border border-[#14D854]/30 rounded text-[#14D854] text-xs hover:bg-[#14D854]/20 transition-colors"
+                        >
+                          <FaExternalLinkAlt size={8} />
+                          Solana
                         </button>
                       </div>
                     )}

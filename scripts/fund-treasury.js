@@ -32,7 +32,7 @@ async function fundTreasury() {
     const aptCoinResource = resources.find(r => r.type === "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>");
     const currentBalance = aptCoinResource ? parseInt(aptCoinResource.data.coin.value) : 0;
     
-    console.log('💰 Current Balance:', (currentBalance / 100000000).toFixed(4), 'APT');
+    console.log('💰 Current Balance:', (currentBalance / 100000000).toFixed(4), 'PC');
     
     if (process.env.NEXT_PUBLIC_APTOS_NETWORK === 'testnet') {
       // Fund from faucet (testnet only)

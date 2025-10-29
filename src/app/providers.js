@@ -4,14 +4,13 @@ import * as React from 'react';
 import { Provider } from 'react-redux';
 import { store } from '@/store';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { WalletStatusProvider } from '@/hooks/useWalletStatus';
 import { NotificationProvider } from '@/components/NotificationSystem';
+import WalletConnectionGuard from '@/components/WalletConnectionGuard';
 import { ThemeProvider } from 'next-themes';
-import { StacksWalletProvider } from '@/contexts/StacksWalletContext';
+import { PushUniversalWalletProvider, PushUI } from '@pushchain/ui-kit';
 import { createTheme, ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { WagmiProvider } from 'wagmi';
-import { config } from '@/config/wagmi';
-import { WalletStatusProvider } from '@/hooks/useWalletStatus';
 
 const queryClient = new QueryClient();
 
@@ -94,23 +93,51 @@ export default function Providers({ children }) {
     );
   }
 
+  // Debug logging
+  console.log('🔧 Providers mounting with Push Universal Wallet...');
+
+  // Push Universal Wallet configuration
+  const walletConfig = {
+    network: PushUI.CONSTANTS.PUSH_NETWORK.TESTNET,
+    login: {
+      email: true,
+      google: true,
+      wallet: {
+        enabled: true,
+      },
+      appPreview: true,
+    },
+    modal: {
+      loginLayout: PushUI.CONSTANTS.LOGIN.LAYOUT.SPLIT,
+      connectedLayout: PushUI.CONSTANTS.CONNECTED.LAYOUT.HOVER,
+      appPreview: true,
+    },
+  };
+
+  // App metadata for Push Universal Wallet
+  const appMetadata = {
+    logoUrl: '/logos/logo-1.png',
+    title: 'APT Casino Push Chain',
+    description: 'Decentralized casino on Push Chain with provably fair games',
+  };
+
   return (
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
-        <WagmiProvider config={config}>
-          <StacksWalletProvider>
+        <PushUniversalWalletProvider config={walletConfig} app={appMetadata}>
+          <NotificationProvider>
             <WalletStatusProvider>
-              <NotificationProvider>
+              <WalletConnectionGuard>
                 <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
                   <MuiThemeProvider theme={muiTheme}>
                     <CssBaseline />
                     {children}
                   </MuiThemeProvider>
                 </ThemeProvider>
-              </NotificationProvider>
+              </WalletConnectionGuard>
             </WalletStatusProvider>
-          </StacksWalletProvider>
-        </WagmiProvider>
+          </NotificationProvider>
+        </PushUniversalWalletProvider>
       </QueryClientProvider>
     </Provider>
   );

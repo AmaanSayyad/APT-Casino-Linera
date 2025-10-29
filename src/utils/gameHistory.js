@@ -4,7 +4,7 @@
  */
 
 /**
- * Save game result to history with both VRF and Stacks transaction details
+ * Save game result to history with VRF transaction hash
  * @param {Object} gameData - Game result data
  * @returns {Promise<Object>} Saved game result
  */
@@ -19,8 +19,7 @@ export const saveGameResult = async (gameData) => {
       betAmount,
       payoutAmount,
       vrfTransactionHash,
-      vrfValue,
-      entropyProof
+      vrfValue
     } = gameData;
 
     // Validate required fields
@@ -28,35 +27,7 @@ export const saveGameResult = async (gameData) => {
       throw new Error('Missing required game data fields');
     }
 
-    // Log game result to Stacks blockchain first
-    let stacksLogResult = null;
-    try {
-      const stacksResponse = await fetch('/api/log-game-result', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          gameType: gameType.toUpperCase(),
-          gameResult: resultData,
-          entropyProof: entropyProof,
-          userAddress: userAddress,
-          betAmount: betAmount || 0,
-          winAmount: payoutAmount || 0
-        })
-      });
-
-      if (stacksResponse.ok) {
-        stacksLogResult = await stacksResponse.json();
-        console.log('✅ Game result logged to Stacks:', stacksLogResult.txId);
-      } else {
-        console.warn('⚠️ Failed to log to Stacks, continuing...');
-      }
-    } catch (stacksError) {
-      console.warn('⚠️ Stacks logging failed:', stacksError.message);
-    }
-
-    // Prepare request body with Stacks transaction info
+    // Prepare request body
     const requestBody = {
       vrfRequestId,
       userAddress,
@@ -64,148 +35,386 @@ export const saveGameResult = async (gameData) => {
       gameConfig,
       resultData,
       betAmount: betAmount ? betAmount.toString() : null,
-      payoutAmount: payoutAmount ? payoutAmount.toString() : null,
-      stacksTxId: stacksLogResult?.txId,
-      stacksExplorerUrl: stacksLogResult?.stacksExplorerUrl
+      payoutAmount: payoutAmount ? payoutAmount.toString() : null
     };
 
-    // Make API request (this might not exist, so we'll handle it gracefully)
-    let response;
-    try {
-      response = await fetch('/api/games/save-result', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody)
-      });
-    } catch (apiError) {
-      console.warn('⚠️ Game save API not available, using localStorage');
-      // Fallback to localStorage
-      return saveToLocalStorage(gameData, stacksLogResult);
+    // Make API request
+    const response = await fetch('/api/games/save-result', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to save game result');
     }
 
-    // If API is available, use it
-    if (response && response.ok) {
-      const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to save game result');
-      }
-      console.log('✅ Game result saved successfully:', data.data?.gameResult?.id);
-      return {
-        success: true,
-        gameResult: data.data?.gameResult,
-        stacksLogResult
-      };
-    } else {
-      // Fallback to localStorage
-      return saveToLocalStorage(gameData, stacksLogResult);
-    }
-
-  } catch (error) {
-    console.error('❌ Error saving game result:', error);
-    // Fallback to localStorage on any error
-    return saveToLocalStorage(gameData, stacksLogResult);
-  }
-};
-
-/**
- * Fallback function to save game result to localStorage
- */
-const saveToLocalStorage = (gameData, stacksLogResult) => {
-  try {
-    const {
-      vrfRequestId,
-      userAddress,
-      gameType,
-      gameConfig,
-      resultData,
-      betAmount,
-      payoutAmount,
-      entropyProof
-    } = gameData;
-
-    const gameResult = {
-      id: Date.now().toString(),
-      vrfRequestId,
-      userAddress,
-      gameType: gameType.toUpperCase(),
-      gameConfig,
-      resultData,
-      betAmount: betAmount || 0,
-      payoutAmount: payoutAmount || 0,
-      timestamp: new Date().toISOString(),
-      entropyProof,
-      stacksTxId: stacksLogResult?.txId,
-      stacksExplorerUrl: stacksLogResult?.stacksExplorerUrl,
-      pythEntropyUrl: entropyProof?.arbiscanUrl ? 
-        `${entropyProof.arbiscanUrl}/tx/${entropyProof.transactionHash}` : null
-    };
-
-    // Save to localStorage
-    const existingHistory = JSON.parse(localStorage.getItem('gameHistory') || '[]');
-    existingHistory.unshift(gameResult); // Add to beginning
-    
-    // Keep only last 100 games
-    if (existingHistory.length > 100) {
-      existingHistory.splice(100);
-    }
-    
-    localStorage.setItem('gameHistory', JSON.stringify(existingHistory));
-
-    console.log('✅ Game result saved to localStorage');
+    console.log('✅ Game result saved successfully:', data.data.gameResult.id);
 
     return {
       success: true,
-      gameResult,
-      stacksLogResult
+      gameId: data.data.gameResult.id,
+      vrfDetails: data.data.vrfDetails,
+      message: 'Game result saved with VRF verification'
     };
 
   } catch (error) {
-    console.error('❌ Error saving to localStorage:', error);
+    console.error('❌ Failed to save game result:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get user's game history
+ * @param {string} userAddress - User's Ethereum address
+ * @param {Object} options - Query options
+ * @returns {Promise<Object>} Game history data
+ */
+export const getUserHistory = async (userAddress, options = {}) => {
+  try {
+    const {
+      gameType,
+      limit = 50,
+      offset = 0,
+      includeVrfDetails = true
+    } = options;
+
+    const params = new URLSearchParams({
+      userAddress,
+      limit: limit.toString(),
+      offset: offset.toString(),
+      includeVrfDetails: includeVrfDetails.toString()
+    });
+
+    if (gameType && gameType !== 'all') {
+      params.append('gameType', gameType);
+    }
+
+    const response = await fetch(`/api/games/history?${params}`);
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to fetch game history');
+    }
+
+    return data.data;
+
+  } catch (error) {
+    console.error('❌ Failed to fetch game history:', error);
+    throw error;
+  }
+};
+
+/**
+ * Verify a specific game result
+ * @param {string} gameId - Game result ID
+ * @returns {Promise<Object>} Verification result
+ */
+export const verifyGameResult = async (gameId) => {
+  try {
+    const response = await fetch('/api/games/verify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ gameId })
+    });
+
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to verify game result');
+    }
+
+    return data.data;
+
+  } catch (error) {
+    console.error('❌ Failed to verify game result:', error);
+    throw error;
+  }
+};
+
+/**
+ * Format game result for display
+ * @param {string} gameType - Game type
+ * @param {Object} resultData - Game result data
+ * @returns {Object} Formatted result
+ */
+export const formatGameResult = (gameType, resultData) => {
+  switch (gameType.toUpperCase()) {
+    case 'ROULETTE':
+      return {
+        primary: `${resultData.number}`,
+        secondary: resultData.color?.toUpperCase(),
+        details: {
+          'Even/Odd': resultData.properties?.isEven ? 'EVEN' : 
+                     resultData.properties?.isOdd ? 'ODD' : 'ZERO',
+          'High/Low': resultData.properties?.isHigh ? 'HIGH' : 
+                      resultData.properties?.isLow ? 'LOW' : 'ZERO',
+          'Dozen': resultData.properties?.dozen || 'N/A',
+          'Column': resultData.properties?.column || 'N/A'
+        }
+      };
+
+    case 'MINES':
+      return {
+        primary: resultData.hitMine ? 'Hit Mine' : 'Safe',
+        secondary: `${resultData.totalMines || 0} mines`,
+        details: {
+          'Revealed Tiles': resultData.revealedTiles?.length || 0,
+          'Mine Positions': resultData.minePositions?.join(', ') || 'N/A',
+          'Game Status': resultData.hitMine ? 'Lost' : 'Won'
+        }
+      };
+
+    case 'PLINKO':
+      return {
+        primary: `Slot ${resultData.finalSlot}`,
+        secondary: `${resultData.multiplier}x`,
+        details: {
+          'Rows': resultData.rows || 'N/A',
+          'Ball Path': resultData.ballPath?.length ? 
+                      `${resultData.ballPath.length} bounces` : 'N/A',
+          'Final Multiplier': `${resultData.multiplier}x`
+        }
+      };
+
+    case 'WHEEL':
+      return {
+        primary: `Segment ${resultData.segment}`,
+        secondary: `${resultData.multiplier}x`,
+        details: {
+          'Color': resultData.color || 'N/A',
+          'Total Segments': resultData.totalSegments || 'N/A',
+          'Multiplier': `${resultData.multiplier}x`
+        }
+      };
+
+    default:
+      return {
+        primary: 'Game Result',
+        secondary: gameType,
+        details: resultData
+      };
+  }
+};
+
+/**
+ * Calculate game statistics
+ * @param {Array} games - Array of game results
+ * @returns {Object} Statistics
+ */
+export const calculateGameStats = (games) => {
+  if (!games || games.length === 0) {
     return {
-      success: false,
-      error: error.message
+      totalGames: 0,
+      totalWagered: '0',
+      totalWon: '0',
+      totalProfit: '0',
+      winRate: 0,
+      averageMultiplier: 0,
+      gameTypeBreakdown: {}
     };
   }
+
+  const stats = {
+    totalGames: games.length,
+    wins: 0,
+    losses: 0,
+    gameTypeBreakdown: {}
+  };
+
+  let totalWagered = BigInt(0);
+  let totalWon = BigInt(0);
+  let totalMultiplier = 0;
+
+  games.forEach(game => {
+    const betAmount = BigInt(game.betAmount || 0);
+    const payoutAmount = BigInt(game.payoutAmount || 0);
+
+    totalWagered += betAmount;
+    totalWon += payoutAmount;
+    totalMultiplier += parseFloat(game.multiplier || 0);
+
+    // Win/loss tracking
+    if (game.isWin) {
+      stats.wins++;
+    } else {
+      stats.losses++;
+    }
+
+    // Game type breakdown
+    const gameType = game.gameType;
+    if (!stats.gameTypeBreakdown[gameType]) {
+      stats.gameTypeBreakdown[gameType] = {
+        count: 0,
+        wagered: BigInt(0),
+        won: BigInt(0),
+        wins: 0,
+        losses: 0
+      };
+    }
+
+    const breakdown = stats.gameTypeBreakdown[gameType];
+    breakdown.count++;
+    breakdown.wagered += betAmount;
+    breakdown.won += payoutAmount;
+    
+    if (game.isWin) {
+      breakdown.wins++;
+    } else {
+      breakdown.losses++;
+    }
+  });
+
+  // Convert BigInt to string for JSON serialization
+  stats.totalWagered = totalWagered.toString();
+  stats.totalWon = totalWon.toString();
+  stats.totalProfit = (totalWon - totalWagered).toString();
+  stats.winRate = stats.totalGames > 0 ? (stats.wins / stats.totalGames * 100).toFixed(2) : 0;
+  stats.averageMultiplier = stats.totalGames > 0 ? (totalMultiplier / stats.totalGames).toFixed(2) : 0;
+
+  // Convert breakdown BigInt values
+  Object.keys(stats.gameTypeBreakdown).forEach(gameType => {
+    const breakdown = stats.gameTypeBreakdown[gameType];
+    breakdown.wagered = breakdown.wagered.toString();
+    breakdown.won = breakdown.won.toString();
+    breakdown.profit = (breakdown.won - breakdown.wagered).toString();
+    breakdown.winRate = breakdown.count > 0 ? (breakdown.wins / breakdown.count * 100).toFixed(2) : 0;
+  });
+
+  return stats;
 };
 
 /**
- * Get game history from localStorage
+ * Export game history to CSV
+ * @param {Array} games - Array of game results
+ * @param {string} userAddress - User address for filename
+ * @returns {void}
  */
-export const getGameHistory = (userAddress = null, limit = 50) => {
-  try {
-    const history = JSON.parse(localStorage.getItem('gameHistory') || '[]');
-    
-    let filteredHistory = history;
-    
-    // Filter by user address if provided
-    if (userAddress) {
-      filteredHistory = history.filter(game => game.userAddress === userAddress);
-    }
-    
-    // Apply limit
-    if (limit) {
-      filteredHistory = filteredHistory.slice(0, limit);
-    }
-    
-    return filteredHistory;
-  } catch (error) {
-    console.error('❌ Error loading game history:', error);
-    return [];
+export const exportGameHistoryCSV = (games, userAddress) => {
+  if (!games || games.length === 0) {
+    throw new Error('No games to export');
   }
+
+  const csvData = games.map(game => {
+    const formattedResult = formatGameResult(game.gameType, game.resultData);
+    
+    return {
+      'Date': new Date(game.createdAt).toISOString(),
+      'Game Type': game.gameType,
+      'Result': formattedResult.primary,
+      'Details': formattedResult.secondary,
+      'Bet Amount (ETH)': (parseFloat(game.betAmount || 0) / 1e18).toFixed(6),
+      'Payout (ETH)': (parseFloat(game.payoutAmount || 0) / 1e18).toFixed(6),
+      'Profit/Loss (ETH)': (parseFloat(game.profitLoss || 0) / 1e18).toFixed(6),
+      'Multiplier': game.multiplier?.toFixed(2) || '0.00',
+      'Win/Loss': game.isWin ? 'WIN' : 'LOSS',
+      'VRF Transaction': game.vrfDetails?.transactionHash || 'N/A',
+      'Block Number': game.vrfDetails?.blockNumber || 'N/A',
+      'VRF Value': game.vrfDetails?.vrfValue || 'N/A',
+      'Game ID': game.id
+    };
+  });
+
+  // Create CSV content
+  const headers = Object.keys(csvData[0]);
+  const csvContent = [
+    headers.join(','),
+    ...csvData.map(row => 
+      headers.map(header => {
+        const value = row[header];
+        // Escape commas and quotes in CSV
+        return typeof value === 'string' && (value.includes(',') || value.includes('"')) 
+          ? `"${value.replace(/"/g, '""')}"` 
+          : value;
+      }).join(',')
+    )
+  ].join('\n');
+
+  // Download CSV
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  
+  link.setAttribute('href', url);
+  link.setAttribute('download', `game-history-${userAddress.slice(0, 8)}-${Date.now()}.csv`);
+  link.style.visibility = 'hidden';
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  URL.revokeObjectURL(url);
 };
 
 /**
- * Clear game history
+ * Get Etherscan URL for transaction
+ * @param {string} transactionHash - Transaction hash
+ * @param {string} network - Network name (default: sepolia)
+ * @returns {string} Etherscan URL
  */
-export const clearGameHistory = () => {
-  try {
-    localStorage.removeItem('gameHistory');
-    console.log('✅ Game history cleared');
-    return true;
-  } catch (error) {
-    console.error('❌ Error clearing game history:', error);
-    return false;
-  }
+export const getEtherscanUrl = (transactionHash, network = 'sepolia') => {
+  const baseUrls = {
+    mainnet: 'https://etherscan.io',
+    sepolia: 'https://sepolia.etherscan.io',
+    goerli: 'https://goerli.etherscan.io'
+  };
+
+  const baseUrl = baseUrls[network] || baseUrls.sepolia;
+  return `${baseUrl}/tx/${transactionHash}`;
+};
+
+/**
+ * Format MON amount for display
+ * @param {string|number} amount - Amount in wei
+ * @param {number} decimals - Number of decimal places
+ * @returns {string} Formatted amount
+ */
+export const formatEthAmount = (amount, decimals = 6) => {
+  if (!amount) return '0';
+  const eth = parseFloat(amount) / 1e18;
+  return eth.toFixed(decimals);
+};
+
+/**
+ * Format date for display
+ * @param {string} dateString - ISO date string
+ * @returns {string} Formatted date
+ */
+export const formatGameDate = (dateString) => {
+  const date = new Date(dateString);
+  return date.toLocaleString();
+};
+
+/**
+ * Get game type emoji
+ * @param {string} gameType - Game type
+ * @returns {string} Emoji
+ */
+export const getGameTypeEmoji = (gameType) => {
+  const emojis = {
+    ROULETTE: '🎰',
+    MINES: '💣',
+    PLINKO: '🏀',
+    WHEEL: '🎡'
+  };
+  return emojis[gameType?.toUpperCase()] || '🎮';
+};
+
+export default {
+  saveGameResult,
+  getUserHistory,
+  verifyGameResult,
+  formatGameResult,
+  calculateGameStats,
+  exportGameHistoryCSV,
+  getEtherscanUrl,
+  formatEthAmount,
+  formatGameDate,
+  getGameTypeEmoji
 };

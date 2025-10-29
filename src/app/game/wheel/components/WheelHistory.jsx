@@ -12,29 +12,19 @@ const WheelHistory = ({ gameHistory = [] }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
 
-   // Open Arbiscan link for transaction hash
-   const openArbiscan = (hash) => {
+   // Open Push Chain Explorer link for transaction hash
+   const openPushChainExplorer = (hash) => {
     if (hash && hash !== 'unknown') {
-      const network = process.env.NEXT_PUBLIC_NETWORK || 'arbitrum-sepolia';
+      const network = process.env.NEXT_PUBLIC_NETWORK || 'push-chain-donut';
       let explorerUrl;
       
-      if (network === 'arbitrum-sepolia') {
-        explorerUrl = `https://sepolia.arbiscan.io/tx/${hash}`;
-      } else if (network === 'arbitrum-one') {
-        explorerUrl = `https://arbiscan.io/tx/${hash}`;
+      if (network === 'push-chain-donut') {
+        explorerUrl = `https://donut.push.network/tx/${hash}`;
       } else {
-        explorerUrl = `https://sepolia.etherscan.io/tx/${hash}`;
+        explorerUrl = `https://donut.push.network/tx/${hash}`;
       }
       
       window.open(explorerUrl, '_blank');
-    }
-  };
-
-  // Open Stacks Explorer link
-  const openStacksExplorer = (txId) => {
-    if (txId) {
-      const stacksExplorerUrl = `https://explorer.stacks.co/txid/${txId}?chain=testnet`;
-      window.open(stacksExplorerUrl, '_blank');
     }
   };
   
@@ -174,7 +164,7 @@ const WheelHistory = ({ gameHistory = [] }) => {
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap'
               }}>
-                {totalVolume.toFixed(5)} STX
+                {totalVolume.toFixed(5)} PC
               </Typography>
               <Box 
                 sx={{ 
@@ -210,7 +200,7 @@ const WheelHistory = ({ gameHistory = [] }) => {
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap'
               }}>
-                {biggestWin.toFixed(5)} STX
+                {biggestWin.toFixed(5)} PC
               </Typography>
               <FaTrophy color="#FFA500" />
             </Box>
@@ -530,7 +520,7 @@ const WheelHistory = ({ gameHistory = [] }) => {
                           whiteSpace: 'nowrap'
                         }}
                       >
-                            {item.betAmount} STX
+                            {item.betAmount} PC
                       </Typography>
                       <Image src="/coin.png" width={16} height={16} alt="coin" />
                     </Box>
@@ -561,7 +551,7 @@ const WheelHistory = ({ gameHistory = [] }) => {
                           whiteSpace: 'nowrap'
                         }}
                       >
-                            {item.payout} STX
+                            {item.payout} PC
                       </Typography>
                       <Image src="/coin.png" width={16} height={16} alt="coin" />
                     </Box>
@@ -621,31 +611,57 @@ const WheelHistory = ({ gameHistory = [] }) => {
                               }
                             }}
                           >
-                            Pyth
+                            Entropy
                           </Button>
-                          {item.stacksTxId && (
-                            <Button
-                              onClick={() => openStacksExplorer(item.stacksTxId)}
-                              size="small"
-                              startIcon={<FaExternalLinkAlt size={10} />}
-                              sx={{ 
-                                color: '#FF8C00',
-                                fontSize: '0.7rem',
-                                minWidth: 'auto',
-                                p: 0,
-                                ml: 1,
-                                '&:hover': {
-                                  backgroundColor: 'transparent',
-                                  textDecoration: 'underline',
-                                }
-                              }}
-                            >
-                              Stacks
-                            </Button>
-                          )}
+                          <Button
+                            onClick={() => {
+                              const url = item.entropyProof?.pushChainExplorerUrl ||
+                                         `https://donut.push.network/tx/${item.entropyProof?.transactionHash || item.entropyProof?.pushChainTxHash}`;
+                              if (url) {
+                                window.open(url, '_blank');
+                              }
+                            }}
+                            size="small"
+                            startIcon={<FaExternalLinkAlt size={10} />}
+                            sx={{ 
+                              color: '#8B2398',
+                              fontSize: '0.7rem',
+                              minWidth: 'auto',
+                              p: 0,
+                              '&:hover': {
+                                backgroundColor: 'transparent',
+                                textDecoration: 'underline',
+                              }
+                            }}
+                          >
+                            Push
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              const url = item.entropyProof?.solanaExplorerUrl ||
+                                         `https://explorer.solana.com/tx/${item.solanaTxSignature}?cluster=testnet`;
+                              if (url) {
+                                window.open(url, '_blank');
+                              }
+                            }}
+                            size="small"
+                            startIcon={<FaExternalLinkAlt size={10} />}
+                            sx={{ 
+                              color: '#14D854',
+                              fontSize: '0.7rem',
+                              minWidth: 'auto',
+                              p: 0,
+                              '&:hover': {
+                                backgroundColor: 'transparent',
+                                textDecoration: 'underline',
+                              }
+                            }}
+                          >
+                            Solana
+                          </Button>
                         </Box>
                         <Typography variant="caption" color="rgba(255,255,255,0.5)">
-                          Blockchain Proofs
+                          Pyth Entropy
                         </Typography>
                       </Box>
                     ) : (

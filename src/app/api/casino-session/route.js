@@ -29,7 +29,7 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { sessionId, gameType, channelId, valueOg } = body || {};
+    const { sessionId, gameType, channelId, valueMon } = body || {};
 
     if (!sessionId || !gameType || !channelId) {
       return new Response(JSON.stringify({ ok: false, error: 'Missing sessionId/gameType/channelId' }), { status: 400 });
@@ -54,8 +54,8 @@ export async function POST(request) {
     } catch {}
 
     let sendValue = 0n;
-    if (valueOg !== undefined && valueOg !== null) {
-      try { sendValue = ethers.parseEther(String(valueOg)); } catch {}
+    if (valueMon !== undefined && valueMon !== null) {
+      try { sendValue = ethers.parseEther(String(valueMon)); } catch {}
     }
     if (sendValue < minBetWei) sendValue = minBetWei;
 

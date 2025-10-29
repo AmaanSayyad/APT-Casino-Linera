@@ -90,8 +90,7 @@ const GameHistory = ({ gameHistory }) => {
                 <th className="py-6 px-4 font-medium">Bet amount</th>
                 <th className="py-6 px-4 font-medium">Multiplier</th>
                 <th className="py-6 px-4 font-medium">Payout</th>
-                <th className="py-6 px-4 font-medium">Result</th>
-                <th className="py-6 px-4 font-medium">Entropy Proof</th>
+                <th className="py-6 px-4 font-medium">Pyth Entropy</th>
               </tr>
             </thead>
             <tbody>
@@ -129,42 +128,26 @@ const GameHistory = ({ gameHistory }) => {
                       </span>
                     </td>
                     <td className="py-6 px-4">
-                      <div 
-                        className="w-6 h-6 rounded-full border-2 border-white/20" 
-                        style={{ backgroundColor: item.color || '#333947' }}
-                        title={`Color: ${item.color || '#333947'}`}
-                      ></div>
-                    </td>
-                    <td className="py-6 px-4">
                       {item.entropyProof ? (
                         <div className="text-xs text-gray-300 font-mono">
                           <div className="text-yellow-400 font-bold">{item.entropyProof.sequenceNumber && item.entropyProof.sequenceNumber !== '0' ? String(item.entropyProof.sequenceNumber) : ''}</div>
                           <div className="flex gap-1 mt-1">
-                            {item.entropyProof.transactionHash && (
-                              <button
-                                onClick={() => window.open(`https://entropy-explorer.pyth.network/tx/${item.entropyProof.transactionHash}`, '_blank')}
-                                className="flex items-center gap-1 px-2 py-1 bg-[#681DDB]/10 border border-[#681DDB]/30 rounded text-[#681DDB] text-xs hover:bg-[#681DDB]/20 transition-colors"
-                              >
-                                <FaExternalLinkAlt size={8} />
-                                Pyth
-                              </button>
-                            )}
-                            {item.stacksExplorerUrl && (
-                              <button
-                                onClick={() => window.open(item.stacksExplorerUrl, '_blank')}
-                                className="flex items-center gap-1 px-2 py-1 bg-orange-500/10 border border-orange-500/30 rounded text-orange-400 text-xs hover:bg-orange-500/20 transition-colors"
-                              >
-                                <FaExternalLinkAlt size={8} />
-                                Stacks
-                              </button>
-                            )}
                             {item.entropyProof.arbiscanUrl && (
                               <button
                                 onClick={() => window.open(item.entropyProof.arbiscanUrl, '_blank')}
                                 className="flex items-center gap-1 px-2 py-1 bg-blue-500/10 border border-blue-500/30 rounded text-blue-400 text-xs hover:bg-blue-500/20 transition-colors"
                               >
                                 <FaExternalLinkAlt size={8} />
-                                Arbitrum
+                                Arbiscan
+                              </button>
+                            )}
+                            {item.entropyProof.transactionHash && (
+                              <button
+                                onClick={() => window.open(`https://entropy-explorer.pyth.network/tx/${item.entropyProof.transactionHash}`, '_blank')}
+                                className="flex items-center gap-1 px-2 py-1 bg-[#681DDB]/10 border border-[#681DDB]/30 rounded text-[#681DDB] text-xs hover:bg-[#681DDB]/20 transition-colors"
+                              >
+                                <FaExternalLinkAlt size={8} />
+                                Entropy
                               </button>
                             )}
                           </div>
@@ -180,7 +163,7 @@ const GameHistory = ({ gameHistory }) => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-gray-400">
+                  <td colSpan={7} className="py-8 text-center text-gray-400">
                     No game history yet. Place your first bet!
                   </td>
                 </tr>

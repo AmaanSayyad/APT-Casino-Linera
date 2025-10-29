@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
-// Treasury address from environment
-const TREASURY_ADDRESS = process.env.TREASURY_ADDRESS || "0xb424d2369F07b925D1218B08e56700AF5928287b";
+// Push Chain Treasury address from environment
+const PUSH_CHAIN_TREASURY_ADDRESS = process.env.PUSH_CHAIN_TREASURY_ADDRESS || process.env.TREASURY_ADDRESS || "0xb424d2369F07b925D1218B08e56700AF5928287b";
 
 export async function POST(request) {
   try {
@@ -26,20 +26,20 @@ export async function POST(request) {
     // For now, we'll simulate a successful deposit
     const mockDepositId = 'deposit_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     
-    console.log(`🏦 Processing deposit: ${amount} STX from ${userAddress}`);
-    console.log(`📍 Treasury: ${TREASURY_ADDRESS}`);
+    console.log(`🏦 Processing deposit: ${amount} PC from ${userAddress}`);
+    console.log(`📍 Treasury: ${PUSH_CHAIN_TREASURY_ADDRESS}`);
     
     // Simulate processing delay
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    console.log(`✅ Deposit successful: ${amount} STX from ${userAddress}`);
+    console.log(`✅ Deposit successful: ${amount} PC from ${userAddress}`);
     
     return NextResponse.json({
       success: true,
       depositId: mockDepositId,
       amount: amount,
       userAddress: userAddress,
-      treasuryAddress: TREASURY_ADDRESS,
+      treasuryAddress: PUSH_CHAIN_TREASURY_ADDRESS,
       status: 'confirmed',
       timestamp: new Date().toISOString()
     });
@@ -72,7 +72,7 @@ export async function GET(request) {
         id: 'deposit_1',
         amount: '0.5',
         userAddress: userAddress,
-        treasuryAddress: TREASURY_ADDRESS,
+        treasuryAddress: PUSH_CHAIN_TREASURY_ADDRESS,
         status: 'confirmed',
         timestamp: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
         transactionHash: '0x' + Math.random().toString(16).substr(2, 64)
@@ -81,7 +81,7 @@ export async function GET(request) {
         id: 'deposit_2',
         amount: '1.0',
         userAddress: userAddress,
-        treasuryAddress: TREASURY_ADDRESS,
+        treasuryAddress: PUSH_CHAIN_TREASURY_ADDRESS,
         status: 'confirmed',
         timestamp: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
         transactionHash: '0x' + Math.random().toString(16).substr(2, 64)

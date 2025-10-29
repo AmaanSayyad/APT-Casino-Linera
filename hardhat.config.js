@@ -31,6 +31,15 @@ module.exports = {
         "User-Agent": "hardhat"
       }
     },
+    'push-chain-donut': {
+      url: process.env.NEXT_PUBLIC_PUSH_CHAIN_RPC || "https://evm.rpc-testnet-donut-node1.push.org/",
+      accounts: process.env.TREASURY_PRIVATE_KEY ? [process.env.TREASURY_PRIVATE_KEY] : [],
+      chainId: 42101,
+      timeout: 120000,
+      httpHeaders: {
+        "User-Agent": "hardhat"
+      }
+    },
     localhost: {
       url: "http://127.0.0.1:8545",
       chainId: 31337,
@@ -40,7 +49,21 @@ module.exports = {
     apiKey: {
       arbitrumSepolia: process.env.ARBISCAN_API_KEY || "",
       arbitrumOne: process.env.ARBISCAN_API_KEY || "",
+      "push-chain-donut": "no-api-key-required",
     },
+    customChains: [
+      {
+        network: "push-chain-donut",
+        chainId: 42101,
+        urls: {
+          apiURL: "https://donut.push.network/api",
+          browserURL: "https://donut.push.network"
+        }
+      }
+    ]
+  },
+  sourcify: {
+    enabled: true
   },
   paths: {
     sources: "./contracts",

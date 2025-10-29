@@ -3,7 +3,7 @@ export const gameData = {
   title: "Mines",
   image: "/images/games/mines.png",
   description: "Unearth hidden gems while avoiding mines in this thrilling crypto game!",
-  youtube: "https://www.youtube.com/embed/Aqz5C7GPrvQ?si=XZlr0I0rGt9CtuHW",
+  youtube: "https://www.youtube.com/embed/SJNWidJKOeA?si=SfKVKLsO_UyfGi5h",
   paragraphs: [
     "Select mines on a 5x5 grid – more mines mean higher rewards but greater risk.",
     "Uncover gems while avoiding mines to increase your multiplier. Cash out anytime or keep going for bigger rewards.",
@@ -61,17 +61,17 @@ export const bettingTableData = {
 
 export const gameStatistics = {
   totalBets: '956,421',
-      totalVolume: '4.7M STX',
-    avgBetSize: '1.85 STX',
-    maxWin: '1,217.50 STX'
+      totalVolume: '4.7M PC',
+    avgBetSize: '1.85 PC',
+    maxWin: '1,217.50 PC'
 };
 
 export const recentBigWins = [
-      { player: "CryptoMiner", amount: "1,217.50 STX", time: "3m ago", config: "10 mines" },
-    { player: "DiamondHands", amount: "892.50 STX", time: "10m ago", config: "5 mines" },
-    { player: "GemHunter", amount: "653.00 STX", time: "22m ago", config: "3 mines" },
-    { player: "RiskTaker", amount: "437.00 STX", time: "45m ago", config: "3 mines" },
-    { player: "TreasureSeeker", amount: "381.50 STX", time: "1h ago", config: "1 mine" }
+      { player: "CryptoMiner", amount: "1,217.50 PC", time: "3m ago", config: "10 mines" },
+    { player: "DiamondHands", amount: "892.50 PC", time: "10m ago", config: "5 mines" },
+    { player: "GemHunter", amount: "653.00 PC", time: "22m ago", config: "3 mines" },
+    { player: "RiskTaker", amount: "437.00 PC", time: "45m ago", config: "3 mines" },
+    { player: "TreasureSeeker", amount: "381.50 PC", time: "1h ago", config: "1 mine" }
 ];
 
 export const winProbabilities = [

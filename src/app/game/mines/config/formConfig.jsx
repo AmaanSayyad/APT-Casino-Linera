@@ -2,7 +2,7 @@ export const manualFormConfig = {
   fields: [
     {
       id: "betAmount",
-      label: "Bet Amount (ETH)",
+      label: "Bet Amount",
       type: "singleSelect",
       options: [0.001, 0.01, 0.1, 1, 2, 5],
       defaultValue: 0.001,
@@ -25,7 +25,7 @@ export const autoFormConfig = {
   fields: [
     {
       id: "betAmount",
-      label: "Bet Amount (ETH)",
+      label: "Bet Amount",
       type: "singleSelect",
       options: [0.001, 0.01, 0.1, 1, 2, 5],
       defaultValue: 0.001,
@@ -72,14 +72,14 @@ export const autoFormConfig = {
     },
     {
       id: "stopOnProfit",
-      label: "Stop on Profit (ETH)",
+      label: "Stop on Profit (PC)",
       type: "text",
       defaultValue: "0.1",
       placeholder: "Auto-stop at this profit",
     },
     {
       id: "stopOnLoss",
-      label: "Stop on Loss (ETH)",
+      label: "Stop on Loss (PC)",
       type: "text",
       defaultValue: "0.1",
       placeholder: "Auto-stop at this loss",

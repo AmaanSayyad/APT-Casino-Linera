@@ -3,8 +3,8 @@ import React, { useState } from 'react';
 import { Box, Typography, Paper, Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, CircularProgress, Fade } from '@mui/material';
 import { FaHistory, FaChartLine, FaFire, FaExclamationCircle, FaCoins, FaInfoCircle, FaTrophy, FaDice, FaExternalLinkAlt } from 'react-icons/fa';
 
-// Utility function to format STX amounts with proper decimal precision
-const formatOGAmount = (amount) => {
+// Utility function to format PC amounts with proper decimal precision
+const formatPCAmount = (amount) => {
   if (typeof amount !== 'number') {
     amount = parseFloat(amount) || 0;
   }
@@ -250,18 +250,16 @@ const RouletteHistory = ({ bettingHistory = [] }) => {
     return redNumbers.includes(num) ? '#d82633' : '#333'; // Red or black
   };
 
-  // Open Arbiscan link for transaction hash
-  const openArbiscan = (hash) => {
+  // Open Push Chain Explorer link for transaction hash
+  const openPushChainExplorer = (hash) => {
     if (hash && hash !== 'unknown') {
-      const network = process.env.NEXT_PUBLIC_NETWORK || 'arbitrum-sepolia';
+      const network = process.env.NEXT_PUBLIC_NETWORK || 'push-chain-donut';
       let explorerUrl;
       
-      if (network === 'arbitrum-sepolia') {
-        explorerUrl = `https://sepolia.arbiscan.io/tx/${hash}`;
-      } else if (network === 'arbitrum-one') {
-        explorerUrl = `https://arbiscan.io/tx/${hash}`;
+      if (network === 'push-chain-donut') {
+        explorerUrl = `https://donut.push.network/tx/${hash}`;
       } else {
-        explorerUrl = `https://sepolia.etherscan.io/tx/${hash}`;
+        explorerUrl = `https://donut.push.network/tx/${hash}`;
       }
       
       window.open(explorerUrl, '_blank');
@@ -273,14 +271,6 @@ const RouletteHistory = ({ bettingHistory = [] }) => {
     if (txHash) {
       const entropyExplorerUrl = `https://entropy-explorer.pyth.network/?chain=arbitrum-sepolia&search=${txHash}`;
       window.open(entropyExplorerUrl, '_blank');
-    }
-  };
-
-  // Open Stacks Explorer link
-  const openStacksExplorer = (txId) => {
-    if (txId) {
-      const stacksExplorerUrl = `https://explorer.stacks.co/txid/${txId}?chain=testnet`;
-      window.open(stacksExplorerUrl, '_blank');
     }
   };
   
@@ -393,7 +383,7 @@ const RouletteHistory = ({ bettingHistory = [] }) => {
                       <TableCell align="center">Amount</TableCell>
                       <TableCell align="center">Result</TableCell>
                       <TableCell align="right">Payout</TableCell>
-                      <TableCell align="center">Blockchain Proofs</TableCell>
+                      <TableCell align="center">Entropy Explorer</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -494,7 +484,7 @@ const RouletteHistory = ({ bettingHistory = [] }) => {
                             )}
                           </Box>
                         </TableCell>
-                        <TableCell align="center">{formatOGAmount(bet.amount || bet.totalBetAmount || 0)} STX</TableCell>
+                        <TableCell align="center">{formatPCAmount(bet.amount || bet.totalBetAmount || 0)} PC</TableCell>
                         <TableCell align="center">
                           <Box 
                             sx={{ 
@@ -530,7 +520,7 @@ const RouletteHistory = ({ bettingHistory = [] }) => {
                             {bet.win ? (
                               <>
                                 <FaCoins size={12} color="#14D854" />
-                                +{formatOGAmount(bet.payout || bet.netResult || 0)} STX
+                                +{formatPCAmount(bet.payout || bet.netResult || 0)} PC
                               </>
                             ) : '-'}
                           </Typography>
@@ -590,13 +580,18 @@ const RouletteHistory = ({ bettingHistory = [] }) => {
                                   >
                                     <FaExternalLinkAlt size={10} color="#681DDB" />
                                     <Typography variant="caption" sx={{ color: '#681DDB', fontSize: '0.7rem', fontWeight: 'bold' }}>
-                                      Pyth
+                                      Entropy
                                     </Typography>
                                   </Box>
                                 )}
-                                {bet.stacksTxId && (
+                                {(bet.entropyProof?.pushChainExplorerUrl || bet.vrfProof?.transactionHash || bet.pushChainTxHash) && (
                                   <Box
-                                    onClick={() => openStacksExplorer(bet.stacksTxId)}
+                                    onClick={() => {
+                                      const url = bet.entropyProof?.pushChainExplorerUrl || 
+                                                 bet.pushChainExplorerUrl ||
+                                                 `https://donut.push.network/tx/${bet.vrfProof?.transactionHash || bet.pushChainTxHash}`;
+                                      window.open(url, '_blank');
+                                    }}
                                     sx={{
                                       display: 'flex',
                                       alignItems: 'center',
@@ -604,18 +599,48 @@ const RouletteHistory = ({ bettingHistory = [] }) => {
                                       cursor: 'pointer',
                                       padding: '2px 6px',
                                       borderRadius: '4px',
-                                      backgroundColor: 'rgba(255, 140, 0, 0.1)',
-                                      border: '1px solid rgba(255, 140, 0, 0.3)',
+                                      backgroundColor: 'rgba(139, 35, 152, 0.1)',
+                                      border: '1px solid rgba(139, 35, 152, 0.3)',
                                       transition: 'all 0.2s ease',
                                       '&:hover': {
-                                        backgroundColor: 'rgba(255, 140, 0, 0.2)',
+                                        backgroundColor: 'rgba(139, 35, 152, 0.2)',
                                         transform: 'scale(1.05)'
                                       }
                                     }}
                                   >
-                                    <FaExternalLinkAlt size={10} color="#FF8C00" />
-                                    <Typography variant="caption" sx={{ color: '#FF8C00', fontSize: '0.7rem', fontWeight: 'bold' }}>
-                                      Stacks
+                                    <FaExternalLinkAlt size={10} color="#8B2398" />
+                                    <Typography variant="caption" sx={{ color: '#8B2398', fontSize: '0.7rem', fontWeight: 'bold' }}>
+                                      Push
+                                    </Typography>
+                                  </Box>
+                                )}
+                                {(bet.entropyProof?.solanaExplorerUrl || bet.solanaTxSignature) && (
+                                  <Box
+                                    onClick={() => {
+                                      const url = bet.entropyProof?.solanaExplorerUrl || 
+                                                 bet.solanaExplorerUrl ||
+                                                 `https://explorer.solana.com/tx/${bet.solanaTxSignature}?cluster=testnet`;
+                                      window.open(url, '_blank');
+                                    }}
+                                    sx={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: 0.5,
+                                      cursor: 'pointer',
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      backgroundColor: 'rgba(20, 216, 84, 0.1)',
+                                      border: '1px solid rgba(20, 216, 84, 0.3)',
+                                      transition: 'all 0.2s ease',
+                                      '&:hover': {
+                                        backgroundColor: 'rgba(20, 216, 84, 0.2)',
+                                        transform: 'scale(1.05)'
+                                      }
+                                    }}
+                                  >
+                                    <FaExternalLinkAlt size={10} color="#14D854" />
+                                    <Typography variant="caption" sx={{ color: '#14D854', fontSize: '0.7rem', fontWeight: 'bold' }}>
+                                      Solana
                                     </Typography>
                                   </Box>
                                 )}
@@ -747,7 +772,7 @@ const RouletteHistory = ({ bettingHistory = [] }) => {
                       </Box>
                       <Typography variant="body2" color="rgba(255,255,255,0.7)">Total Wagered</Typography>
                     </Box>
-                    <Typography variant="h4" fontWeight="bold" color="white" sx={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>{formatOGAmount(stats.totalWagered)} STX</Typography>
+                    <Typography variant="h4" fontWeight="bold" color="white" sx={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>{formatPCAmount(stats.totalWagered)} PC</Typography>
                   </Box>
                   
                   <Box 
@@ -789,7 +814,7 @@ const RouletteHistory = ({ bettingHistory = [] }) => {
                       color={stats.netProfit >= 0 ? '#14D854' : '#d82633'}
                       sx={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}
                     >
-                      {stats.netProfit >= 0 ? '+' : ''}{formatOGAmount(stats.netProfit)} STX
+                      {stats.netProfit >= 0 ? '+' : ''}{formatPCAmount(stats.netProfit)} PC
                     </Typography>
                   </Box>
                 </Box>
@@ -909,7 +934,7 @@ const RouletteHistory = ({ bettingHistory = [] }) => {
                             zIndex: 2 
                           }}
                         >
-                          {stats.biggestWin.payout} STX
+                          {stats.biggestWin.payout} PC
                         </Typography>
                         <Box 
                           sx={{ 

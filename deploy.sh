@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# APT Casino Deployment Script
-# This script deploys the entire casino application to Aptos testnet/mainnet and Vercel
+# APT Casino Monad Deployment Script
+# This script deploys the entire casino application to Monad testnet and Vercel
 
 set -e
 
@@ -60,10 +60,10 @@ check_prerequisites() {
         exit 1
     fi
     
-    # Check Aptos CLI
-    if ! command_exists aptos; then
-        print_warning "Aptos CLI is not installed. Installing..."
-        curl -fsSL "https://aptoslabs.com/scripts/install_cli.py" | python3
+    # Check Hardhat
+    if ! command_exists npx; then
+        print_error "npx is not available. Please ensure Node.js is properly installed"
+        exit 1
     fi
     
     # Check Vercel CLI
