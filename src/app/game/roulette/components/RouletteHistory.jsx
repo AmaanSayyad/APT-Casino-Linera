@@ -269,7 +269,7 @@ const RouletteHistory = ({ bettingHistory = [] }) => {
   // Open Entropy Explorer link
   const openEntropyExplorer = (txHash) => {
     if (txHash) {
-      const entropyExplorerUrl = `https://entropy-explorer.pyth.network/?chain=arbitrum-sepolia&search=${txHash}`;
+      const entropyExplorerUrl = `https://entropy-explorer.pyth.network/?chain=push-chain-donut&search=${txHash}`;
       window.open(entropyExplorerUrl, '_blank');
     }
   };
@@ -584,12 +584,11 @@ const RouletteHistory = ({ bettingHistory = [] }) => {
                                     </Typography>
                                   </Box>
                                 )}
-                                {(bet.entropyProof?.pushChainExplorerUrl || bet.vrfProof?.transactionHash || bet.pushChainTxHash) && (
+                                {(bet.entropyProof?.pushChainExplorerUrl || bet.vrfProof?.transactionHash) && (
                                   <Box
                                     onClick={() => {
                                       const url = bet.entropyProof?.pushChainExplorerUrl || 
-                                                 bet.pushChainExplorerUrl ||
-                                                 `https://donut.push.network/tx/${bet.vrfProof?.transactionHash || bet.pushChainTxHash}`;
+                                                 `https://donut.push.network/tx/${bet.vrfProof?.transactionHash}`;
                                       window.open(url, '_blank');
                                     }}
                                     sx={{
@@ -611,36 +610,6 @@ const RouletteHistory = ({ bettingHistory = [] }) => {
                                     <FaExternalLinkAlt size={10} color="#8B2398" />
                                     <Typography variant="caption" sx={{ color: '#8B2398', fontSize: '0.7rem', fontWeight: 'bold' }}>
                                       Push
-                                    </Typography>
-                                  </Box>
-                                )}
-                                {(bet.entropyProof?.solanaExplorerUrl || bet.solanaTxSignature) && (
-                                  <Box
-                                    onClick={() => {
-                                      const url = bet.entropyProof?.solanaExplorerUrl || 
-                                                 bet.solanaExplorerUrl ||
-                                                 `https://explorer.solana.com/tx/${bet.solanaTxSignature}?cluster=testnet`;
-                                      window.open(url, '_blank');
-                                    }}
-                                    sx={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: 0.5,
-                                      cursor: 'pointer',
-                                      padding: '2px 6px',
-                                      borderRadius: '4px',
-                                      backgroundColor: 'rgba(20, 216, 84, 0.1)',
-                                      border: '1px solid rgba(20, 216, 84, 0.3)',
-                                      transition: 'all 0.2s ease',
-                                      '&:hover': {
-                                        backgroundColor: 'rgba(20, 216, 84, 0.2)',
-                                        transform: 'scale(1.05)'
-                                      }
-                                    }}
-                                  >
-                                    <FaExternalLinkAlt size={10} color="#14D854" />
-                                    <Typography variant="caption" sx={{ color: '#14D854', fontSize: '0.7rem', fontWeight: 'bold' }}>
-                                      Solana
                                     </Typography>
                                   </Box>
                                 )}

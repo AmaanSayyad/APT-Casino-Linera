@@ -8,7 +8,18 @@ import { WalletStatusProvider } from '@/hooks/useWalletStatus';
 import { NotificationProvider } from '@/components/NotificationSystem';
 import WalletConnectionGuard from '@/components/WalletConnectionGuard';
 import { ThemeProvider } from 'next-themes';
-import { PushUniversalWalletProvider, PushUI } from '@pushchain/ui-kit';
+import { WagmiProvider, createConfig, http } from 'wagmi';
+import { pushChainDonut } from '@/config/chains';
+import { RainbowKitProvider, getDefaultConfig, connectorsForWallets } from '@rainbow-me/rainbowkit';
+import { 
+  metaMaskWallet,
+  walletConnectWallet,
+  injectedWallet,
+  rainbowWallet,
+  coinbaseWallet,
+  trustWallet
+} from '@rainbow-me/rainbowkit/wallets';
+import '@rainbow-me/rainbowkit/styles.css';
 import { createTheme, ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 
@@ -94,51 +105,83 @@ export default function Providers({ children }) {
   }
 
   // Debug logging
-  console.log('🔧 Providers mounting with Push Universal Wallet...');
+  console.log('🔧 Providers mounting...');
+  console.log('🔧 Project ID: 226b43b703188d269fb70d02c107c34e');
 
-  // Push Universal Wallet configuration
-  const walletConfig = {
-    network: PushUI.CONSTANTS.PUSH_NETWORK.TESTNET,
-    login: {
-      email: true,
-      google: true,
-      wallet: {
-        enabled: true,
+  // RainbowKit configuration for Push Chain Donut Testnet
+  let config;
+  
+  try {
+    config = getDefaultConfig({
+      appName: 'APT Casino Push Chain',
+      projectId: '226b43b703188d269fb70d02c107c34e',
+      chains: [pushChainDonut],
+      ssr: true,
+    });
+    console.log('🔧 Config created with getDefaultConfig:', config);
+  } catch (error) {
+    console.error('❌ Error creating config with getDefaultConfig:', error);
+    
+    // Fallback to manual config with MetaMask Smart Accounts support
+    const connectors = connectorsForWallets([
+      {
+        groupName: 'Recommended',
+        wallets: [
+          metaMaskWallet({
+            projectId: '226b43b703188d269fb70d02c107c34e',
+            // Enable Smart Accounts support
+            options: {
+              enableSmartAccounts: true,
+            }
+          }),
+          walletConnectWallet,
+          injectedWallet,
+        ],
       },
-      appPreview: true,
-    },
-    modal: {
-      loginLayout: PushUI.CONSTANTS.LOGIN.LAYOUT.SPLIT,
-      connectedLayout: PushUI.CONSTANTS.CONNECTED.LAYOUT.HOVER,
-      appPreview: true,
-    },
-  };
+      {
+        groupName: 'Other',
+        wallets: [
+          rainbowWallet,
+          coinbaseWallet,
+          trustWallet,
+        ],
+      },
+    ], {
+      appName: 'APT Casino Push Chain',
+      projectId: '226b43b703188d269fb70d02c107c34e',
+    });
 
-  // App metadata for Push Universal Wallet
-  const appMetadata = {
-    logoUrl: '/logos/logo-1.png',
-    title: 'APT Casino Push Chain',
-    description: 'Decentralized casino on Push Chain with provably fair games',
-  };
+    config = createConfig({
+      connectors,
+      chains: [pushChainDonut],
+      transports: {
+        [pushChainDonut.id]: http(),
+      },
+      ssr: true,
+    });
+    console.log('🔧 Config created with manual setup:', config);
+  }
 
   return (
     <Provider store={store}>
-      <QueryClientProvider client={queryClient}>
-        <PushUniversalWalletProvider config={walletConfig} app={appMetadata}>
-          <NotificationProvider>
-            <WalletStatusProvider>
-              <WalletConnectionGuard>
-                <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-                  <MuiThemeProvider theme={muiTheme}>
-                    <CssBaseline />
-                    {children}
-                  </MuiThemeProvider>
-                </ThemeProvider>
-              </WalletConnectionGuard>
-            </WalletStatusProvider>
-          </NotificationProvider>
-        </PushUniversalWalletProvider>
-      </QueryClientProvider>
+      <WagmiProvider config={config}>
+        <QueryClientProvider client={queryClient}>
+          <RainbowKitProvider>
+            <NotificationProvider>
+              <WalletStatusProvider>
+                <WalletConnectionGuard>
+                  <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+                    <MuiThemeProvider theme={muiTheme}>
+                      <CssBaseline />
+                      {children}
+                    </MuiThemeProvider>
+                  </ThemeProvider>
+                </WalletConnectionGuard>
+              </WalletStatusProvider>
+            </NotificationProvider>
+          </RainbowKitProvider>
+        </QueryClientProvider>
+      </WagmiProvider>
     </Provider>
   );
 }

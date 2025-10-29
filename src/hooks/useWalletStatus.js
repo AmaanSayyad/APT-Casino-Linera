@@ -7,7 +7,7 @@ import React, {
   useEffect,
   useCallback,
 } from 'react';
-import { usePushWalletContext, usePushChainClient, PushUI } from '@pushchain/ui-kit';
+import { useAccount, useConnect, useDisconnect } from 'wagmi';
 
 const WalletStatusContext = createContext(null);
 
@@ -15,8 +15,14 @@ export function WalletStatusProvider({ children }) {
   // Always use real wallet - no dev wallet
   const isDev = false;
 
-  const { connectionStatus } = usePushWalletContext();
-  const { pushChainClient } = usePushChainClient();
+  const {
+    address: account,
+    isConnected: connected,
+    chain: network
+  } = useAccount();
+
+  const { connect, connectors } = useConnect();
+  const { disconnect } = useDisconnect();
 
   const [devWallet, setDevWallet] = useState({
     isConnected: false,
@@ -72,18 +78,23 @@ export function WalletStatusProvider({ children }) {
       setDevWallet({
         isConnected: true,
         address: '0x1234...dev',
-        chain: { id: 'push_chain_testnet', name: 'Push Chain Testnet' },
+        chain: { id: 'arbitrum_testnet', name: 'Arbitrum Sepolia' },
       });
       return;
     }
 
     try {
-      // Push Universal Wallet handles connection automatically
-      console.log('🔗 Push Universal Wallet connection initiated');
+      // MetaMask ile bağlan
+      const metaMaskConnector = connectors.find(connector => connector.id === 'metaMask');
+      if (metaMaskConnector) {
+        await connect({ connector: metaMaskConnector });
+      } else {
+        setError('MetaMask connector not found');
+      }
     } catch (err) {
-      setError('Failed to connect to Push Universal Wallet: ' + err.message);
+      setError('Failed to connect to MetaMask: ' + err.message);
     }
-  }, [isDev]);
+  }, [connect, connectors, isDev]);
 
   const disconnectWallet = useCallback(async () => {
     if (isDev) {
@@ -97,50 +108,52 @@ export function WalletStatusProvider({ children }) {
     }
 
     try {
-      // Push Universal Wallet handles disconnection automatically
-      console.log('🔌 Push Universal Wallet disconnection initiated');
+      await disconnect();
     } catch (err) {
       setError('Failed to disconnect wallet: ' + err.message);
     }
-  }, [isDev]);
+  }, [disconnect, isDev]);
 
   const resetError = useCallback(() => {
     setError(null);
   }, []);
 
-  const isConnected = connectionStatus === PushUI.CONSTANTS.CONNECTION.STATUS.CONNECTED;
-  const address = pushChainClient?.universal?.account || null;
-  const chain = isConnected ? { id: 'push_chain_testnet', name: 'Push Chain Testnet' } : null;
-
   const currentStatus = {
-    isConnected,
-    address,
-    chain,
+    isConnected: !!connected && !!account, // Only connected if we have both connected and address
+    address: account, // account is already the address string
+    chain: network,
   };
 
   // Debug currentStatus calculation
-  console.log('🔍 Push Universal Wallet status:', {
-    connectionStatus,
-    isConnected,
-    address,
-    chain,
-    pushChainClient: !!pushChainClient
+  console.log('🔍 currentStatus calculation:', {
+    connected,
+    account,
+    accountAddress: account, // account is already the address
+    network,
+    finalIsConnected: !!connected && !!account
   });
 
   useEffect(() => {
-    console.log('🔌 Push Universal Wallet connection changed:');
+    console.log('🔌 Wallet connection changed:');
     console.log('=== CURRENT STATUS ===');
     console.log('Connected:', currentStatus.isConnected);
     console.log('Address:', currentStatus.address);
     console.log('Chain:', currentStatus.chain);
-    console.log('=== PUSH CHAIN VALUES ===');
-    console.log('Connection Status:', connectionStatus);
-    console.log('Push Chain Client:', !!pushChainClient);
-    console.log('Universal Account:', pushChainClient?.universal?.account);
+    console.log('=== RAW WAGMI VALUES ===');
+    console.log('Raw connected:', connected);
+    console.log('Raw account:', account);
+    console.log('Raw network:', network);
     console.log('=== ENVIRONMENT ===');
     console.log('Is Dev:', isDev);
     console.log('Dev Wallet:', devWallet);
-  }, [currentStatus, connectionStatus, pushChainClient, isDev, devWallet]);
+    console.log('=== LOCAL STORAGE ===');
+    console.log('Dev wallet state:', localStorage.getItem('dev-wallet-state'));
+    console.log('Wagmi storage:', localStorage.getItem('aptcasino.wallet'));
+    console.log('=== WINDOW ETHEREUM ===');
+    console.log('Window ethereum exists:', !!window.ethereum);
+    console.log('Window ethereum connected:', window.ethereum?.isConnected?.());
+    console.log('Window ethereum accounts:', window.ethereum?.selectedAddress);
+  }, [currentStatus, connected, account, network, isDev, devWallet]);
 
   return (
     <WalletStatusContext.Provider

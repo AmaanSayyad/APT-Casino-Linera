@@ -31,7 +31,7 @@ import StrategyGuide from './components/StrategyGuide';
 import RoulettePayout from './components/RoulettePayout';
 import WinProbabilities from './components/WinProbabilities';
 import RouletteHistory from './components/RouletteHistory';
-import { usePushWalletContext, usePushChainClient, PushUI } from '@pushchain/ui-kit';
+import { useAccount } from 'wagmi';
 import { useSelector, useDispatch } from 'react-redux';
 import { setBalance, setLoading, loadBalanceFromStorage } from '@/store/balanceSlice';
 import pythEntropyService from '@/services/PythEntropyService';
@@ -1190,11 +1190,8 @@ export default function GameRoulette() {
   const [bettingHistory, setBettingHistory] = useState([]);
   const [error, setError] = useState(null);
 
-  // Push Universal Wallet
-  const { connectionStatus } = usePushWalletContext();
-  const { pushChainClient } = usePushChainClient();
-  const isConnected = connectionStatus === PushUI.CONSTANTS.CONNECTION.STATUS.CONNECTED;
-  const address = pushChainClient?.universal?.account || null;
+  // Ethereum wallet
+  const { address, isConnected } = useAccount();
   const account = { address };
   const connected = isConnected;
   const isWalletReady = isConnected && address;
@@ -2035,95 +2032,6 @@ export default function GameRoulette() {
             source: 'Pyth Entropy'
           };
           
-          // Log game result to Push Chain
-          fetch('/api/log-to-push', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              gameType: 'ROULETTE',
-              gameResult: {
-                winningNumber,
-                totalBets: allBets.length,
-                winningBets: winningBets.length,
-                losingBets: losingBets.length
-              },
-              playerAddress: address || 'unknown',
-              betAmount: totalBetAmount,
-              payout: netResult,
-              entropyProof: newBet.entropyProof
-            })
-          }).then(response => response.json())
-            .then(pushResult => {
-              console.log('🔗 Push Chain logging result:', pushResult);
-              if (pushResult.success) {
-                // Add Push Chain info to bet result
-                newBet.pushChainTxHash = pushResult.transactionHash;
-                newBet.pushChainExplorerUrl = pushResult.pushChainExplorerUrl;
-                
-                // Update betting history with Push Chain info
-                setBettingHistory(prev => {
-                  const updatedHistory = [...prev];
-                  if (updatedHistory.length > 0) {
-                    updatedHistory[0] = { 
-                      ...updatedHistory[0], 
-                      pushChainTxHash: pushResult.transactionHash,
-                      pushChainExplorerUrl: pushResult.pushChainExplorerUrl
-                    };
-                  }
-                  return updatedHistory;
-                });
-              }
-            })
-            .catch(error => {
-              console.error('❌ Push Chain logging failed:', error);
-            });
-
-          // Log game result to Solana
-          fetch('/api/log-to-solana', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              gameType: 'ROULETTE',
-              gameResult: {
-                winningNumber,
-                totalBets: allBets.length,
-                winningBets: winningBets.length,
-                losingBets: losingBets.length
-              },
-              playerAddress: address || 'unknown',
-              betAmount: totalBetAmount,
-              payout: netResult,
-              entropyProof: newBet.entropyProof
-            })
-          }).then(response => response.json())
-            .then(solanaResult => {
-              console.log('🔗 Solana logging result:', solanaResult);
-              if (solanaResult.success) {
-                // Add Solana info to bet result
-                newBet.solanaTxSignature = solanaResult.transactionSignature;
-                newBet.solanaExplorerUrl = solanaResult.solanaExplorerUrl;
-                
-                // Update betting history with Solana info
-                setBettingHistory(prev => {
-                  const updatedHistory = [...prev];
-                  if (updatedHistory.length > 0) {
-                    updatedHistory[0] = { 
-                      ...updatedHistory[0], 
-                      solanaTxSignature: solanaResult.transactionSignature,
-                      solanaExplorerUrl: solanaResult.solanaExplorerUrl
-                    };
-                  }
-                  return updatedHistory;
-                });
-              }
-            })
-            .catch(error => {
-              console.error('❌ Solana logging failed:', error);
-            });
           
           // Update betting history with entropy proof
           setBettingHistory(prev => {

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from 'react';
-import { usePushWalletContext, usePushChainClient, PushUI } from '@pushchain/ui-kit';
+import { useAccount } from 'wagmi';
 
 // Mock functions for demo purposes
 const arbitrumClient = {
@@ -74,10 +74,7 @@ const CasinoGames = {
 };
 
 export const useArbitrumCasino = () => {
-  const { connectionStatus } = usePushWalletContext();
-  const { pushChainClient } = usePushChainClient();
-  const connected = connectionStatus === PushUI.CONSTANTS.CONNECTION.STATUS.CONNECTED;
-  const account = pushChainClient?.universal?.account || null;
+  const { address: account, isConnected: connected } = useAccount();
   const [balance, setBalance] = useState('0');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);

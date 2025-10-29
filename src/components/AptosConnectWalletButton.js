@@ -1,13 +1,12 @@
 "use client";
 import React from 'react';
-import { usePushWalletContext, usePushChainClient, PushUI } from '@pushchain/ui-kit';
+import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { MetaMaskConnector } from '@wagmi/connectors/metaMask';
 
 export default function EthereumConnectWalletButton() {
-  const { connectionStatus } = usePushWalletContext();
-  const { pushChainClient } = usePushChainClient();
-  const isConnected = connectionStatus === PushUI.CONSTANTS.CONNECTION.STATUS.CONNECTED;
-  const address = pushChainClient?.universal?.account || null;
+  const { address, isConnected } = useAccount();
+  const { connect, connectors } = useConnect();
+  const { disconnect } = useDisconnect();
 
   const handleConnect = async () => {
     const metaMaskConnector = connectors.find(connector => connector.id === 'metaMask');

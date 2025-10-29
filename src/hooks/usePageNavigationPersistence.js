@@ -1,7 +1,7 @@
 "use client";
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { usePushWalletContext, usePushChainClient, PushUI } from '@pushchain/ui-kit';
+import { useAccount, useConnect } from 'wagmi';
 import { memoryWalletStorage as walletStorage } from '@/utils/memoryWalletStorage';
 
 /**
@@ -10,10 +10,8 @@ import { memoryWalletStorage as walletStorage } from '@/utils/memoryWalletStorag
  */
 export const usePageNavigationPersistence = () => {
   const pathname = usePathname();
-  const { connectionStatus } = usePushWalletContext();
-  const { pushChainClient } = usePushChainClient();
-  const isConnected = connectionStatus === PushUI.CONSTANTS.CONNECTION.STATUS.CONNECTED;
-  const address = pushChainClient?.universal?.account || null;
+  const { isConnected, address } = useAccount();
+  const { connect, connectors } = useConnect();
 
   useEffect(() => {
     // Only run on client side

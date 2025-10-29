@@ -1,43 +1,61 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { usePushWalletContext, usePushChainClient, PushUI } from '@pushchain/ui-kit';
+import { useAccount, useWalletClient } from 'wagmi';
 
 const SmartAccountInfo = () => {
-  const { connectionStatus } = usePushWalletContext();
-  const { pushChainClient } = usePushChainClient();
-  const isConnected = connectionStatus === PushUI.CONSTANTS.CONNECTION.STATUS.CONNECTED;
-  const address = pushChainClient?.universal?.account || null;
+  const { address, isConnected } = useAccount();
+  const { data: walletClient } = useWalletClient();
   const [smartAccountInfo, setSmartAccountInfo] = useState(null);
   const [isSmartAccount, setIsSmartAccount] = useState(false);
 
   useEffect(() => {
     const checkSmartAccount = async () => {
-      if (!isConnected || !address || !pushChainClient) return;
+      if (!isConnected || !address || !walletClient) return;
 
       try {
-        // Push Universal Wallet provides smart account functionality by default
-        setIsSmartAccount(true);
-        setSmartAccountInfo({
-          address,
-          type: 'Push Universal Smart Account',
-          hasCode: true,
-          features: ['Gasless Transactions', 'Social Login', 'Batch Transactions']
-        });
+        // Check if the connected account is a smart account
+        let code = '0x';
+        try {
+          if (walletClient.getBytecode) {
+            code = await walletClient.getBytecode({ address });
+          } else if (walletClient.getCode) {
+            code = await walletClient.getCode({ address });
+          } else if (window.ethereum) {
+            code = await window.ethereum.request({
+              method: 'eth_getCode',
+              params: [address, 'latest']
+            });
+          }
+        } catch (codeError) {
+          console.warn('Could not get bytecode:', codeError);
+          code = '0x';
+        }
+        
+        const hasCode = code && code !== '0x' && code.length > 2;
+        setIsSmartAccount(hasCode);
+
+        if (hasCode) {
+          setSmartAccountInfo({
+            address,
+            type: 'Smart Account',
+            hasCode: true,
+            codeLength: code?.length || 0
+          });
+        } else {
+          setSmartAccountInfo({
+            address,
+            type: 'Externally Owned Account (EOA)',
+            hasCode: false
+          });
+        }
       } catch (error) {
         console.error('Error checking smart account:', error);
-        // Fallback to EOA
-        setIsSmartAccount(false);
-        setSmartAccountInfo({
-          address,
-          type: 'Externally Owned Account (EOA)',
-          hasCode: false
-        });
       }
     };
 
     checkSmartAccount();
-  }, [isConnected, address, pushChainClient]);
+  }, [isConnected, address, walletClient]);
 
   if (!isConnected || !smartAccountInfo) return null;
 
@@ -55,19 +73,11 @@ const SmartAccountInfo = () => {
             {smartAccountInfo.type}
           </span>
         </div>
-        {isSmartAccount && smartAccountInfo.features && (
+        {isSmartAccount && (
           <div className="mt-2 p-2 bg-blue-900/30 rounded border border-blue-700">
-            <div className="flex items-center space-x-2 mb-2">
+            <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-              <span className="text-blue-300 text-xs">Push Universal Wallet Features</span>
-            </div>
-            <div className="space-y-1">
-              {smartAccountInfo.features.map((feature, index) => (
-                <div key={index} className="flex items-center space-x-2">
-                  <div className="w-1 h-1 bg-blue-300 rounded-full"></div>
-                  <span className="text-blue-200 text-xs">{feature}</span>
-                </div>
-              ))}
+              <span className="text-blue-300 text-xs">Smart Account Features Active</span>
             </div>
           </div>
         )}

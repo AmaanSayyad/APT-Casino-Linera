@@ -3,8 +3,10 @@
  * For use with wagmi, viem, and Yellow Network integration
  */
 
-// Yellow Canary Testnet Chain Definition (without viem dependency)
-export const yellowCanary = {
+import { defineChain } from 'viem';
+
+// Yellow Canary Testnet Chain Definition
+export const yellowCanary = defineChain({
   id: 5001,
   name: 'Yellow Canary Testnet',
   network: 'yellow-canary',
@@ -37,7 +39,7 @@ export const yellowCanary = {
     },
   },
   testnet: true,
-};
+});
 
 // Network configuration for wallet connections
 export const YELLOW_CANARY_NETWORK = {

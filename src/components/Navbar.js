@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
-import { usePushWalletContext, usePushChainClient, PushUI } from '@pushchain/ui-kit';
+import { useAccount, useChainId, useWalletClient } from 'wagmi';
 import { useSelector, useDispatch } from 'react-redux';
 import { setBalance, setLoading, loadBalanceFromStorage } from '@/store/balanceSlice';
 import { useSmartAccount } from '@/hooks/useSmartAccount';
@@ -129,11 +129,10 @@ export default function Navbar() {
   const [showLiveChat, setShowLiveChat] = useState(false);
 
 
-  // Push Universal Wallet connection
-  const { connectionStatus } = usePushWalletContext();
-  const { pushChainClient } = usePushChainClient();
-  const isConnected = connectionStatus === PushUI.CONSTANTS.CONNECTION.STATUS.CONNECTED;
-  const address = pushChainClient?.universal?.account || null;
+  // Wallet connection with persistence
+  const { isConnected, address } = useAccount();
+  const chainId = useChainId();
+  const { data: walletClient } = useWalletClient();
   const isWalletReady = isConnected && address;
   
   // Smart Account hook
@@ -148,32 +147,32 @@ export default function Navbar() {
   // Use global wallet persistence hook
   useGlobalWalletPersistence();
 
-  // Debug Push Universal Wallet connection
+  // Debug wallet connection
   useEffect(() => {
-    console.log('🔗 Push Universal Wallet connection state:', { 
-      connectionStatus,
+    console.log('🔗 Wallet connection state:', { 
       isConnected, 
       address, 
-      pushChainClient: !!pushChainClient,
+      chainId, 
+      walletClient: !!walletClient,
       isWalletReady 
     });
     
     // Check if wallet is connected but address is not yet available
     if (isConnected && !address) {
-      console.log('⚠️ Push Universal Wallet connected but address not yet available, waiting...');
+      console.log('⚠️ Wallet connected but address not yet available, waiting...');
       // Add a small delay to see if address becomes available
       const timer = setTimeout(() => {
-        console.log('⏰ After delay - Push Universal Wallet state:', { 
-          connectionStatus,
+        console.log('⏰ After delay - Wallet state:', { 
           isConnected, 
           address, 
-          pushChainClient: !!pushChainClient,
+          chainId, 
+          walletClient: !!walletClient,
           isWalletReady 
         });
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [connectionStatus, isConnected, address, pushChainClient, isWalletReady]);
+  }, [isConnected, address, chainId, walletClient, isWalletReady]);
 
 
   // Mock notifications for UI purposes

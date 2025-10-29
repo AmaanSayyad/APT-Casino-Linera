@@ -1,5 +1,6 @@
 import { NitroliteClient } from '@erc7824/nitrolite';
-// Viem removed - using Push Chain instead
+import { createPublicClient, http } from 'viem';
+import { arbitrumSepolia } from 'viem/chains';
 import { yellowCanary, CLEARNODE_TESTNET_CONFIG } from '../config/yellowCanaryChain.js';
 import { CLEARNODE_TESTNET_TOKENS, DEFAULT_CASINO_TOKEN, getTokensByTestnet } from '../config/yellowCanaryTokens.js';
 import { YELLOW_ARBITRUM_CONFIG, switchToArbitrumSepolia } from '../config/arbitrumSepoliaConfig.js';
@@ -116,8 +117,11 @@ class YellowNetworkService {
         console.log('🟡 YELLOW NETWORK: Initializing ERC-7824 Nitrolite client...');
         console.log('🔗 Connecting to Clearnode Testnet:', process.env.CLEARNODE_TESTNET_WS_URL || CLEARNODE_TESTNET_CONFIG.clearNodeUrl);
 
-        // Push Chain client will be used instead of Arbitrum
-        const arbitrumClient = null; // Placeholder for Push Chain client
+        // Create Monad Network client for on-chain operations
+        const arbitrumClient = createPublicClient({
+          chain: arbitrumSepolia,
+          transport: http(process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC || 'https://sepolia-rollup.arbitrum.io/rpc')
+        });
 
         console.log('🔗 Primary Network: Monad Network (Chain ID: 421614)');
         console.log('🟡 Yellow Network: Clearnode Testnet for state channels');

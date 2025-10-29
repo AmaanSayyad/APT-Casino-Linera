@@ -1,32 +1,43 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { usePushWalletContext, usePushChainClient, PushUI } from '@pushchain/ui-kit';
-// Push Universal Wallet handles network switching automatically
+import { useAccount, useChainId, useSwitchChain } from 'wagmi';
+import { switchToPushChainDonut, isPushChainDonut, PUSH_CHAIN_DONUT_CONFIG } from '@/utils/networkUtils';
 
 const NetworkSwitcher = () => {
-  const { connectionStatus } = usePushWalletContext();
-  const { pushChainClient } = usePushChainClient();
-  const isConnected = connectionStatus === PushUI.CONSTANTS.CONNECTION.STATUS.CONNECTED;
+  const { isConnected } = useAccount();
+  const chainId = useChainId();
+  const { switchChain } = useSwitchChain();
   const [isWrongNetwork, setIsWrongNetwork] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
 
   useEffect(() => {
-    // Push Universal Wallet is always on the correct network
-    if (isConnected) {
-      setIsWrongNetwork(false);
+    if (isConnected && chainId) {
+      setIsWrongNetwork(!isPushChainDonut(chainId));
     }
-  }, [isConnected]);
+  }, [isConnected, chainId]);
 
   const handleSwitchNetwork = async () => {
     if (!isConnected) return;
 
     setIsSwitching(true);
     try {
-      // Push Universal Wallet handles network switching automatically
-      console.log('Push Universal Wallet is already on the correct network');
+      // First try using wagmi's switchChain
+      if (switchChain) {
+        try {
+          await switchChain({ chainId: 42101 });
+        } catch (wagmiError) {
+          console.log('Wagmi switch failed, trying manual method:', wagmiError);
+          // If wagmi fails, try manual MetaMask method
+          await switchToPushChainDonut();
+        }
+      } else {
+        // Fallback to manual method
+        await switchToMonadTestnet();
+      }
     } catch (error) {
-      console.error('Network switch error:', error);
+      console.error('Failed to switch network:', error);
+      alert('Failed to switch to Push Chain Donut Testnet. Please add it manually in MetaMask.');
     } finally {
       setIsSwitching(false);
     }

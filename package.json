@@ -1,5 +1,5 @@
 {
-  "name": "apt-casino-push",
+  "name": "apt-casino-monad",
   "version": "0.1.0",
   "private": true,
   "engines": {
@@ -29,10 +29,7 @@
     "test:pyth-entropy": "node scripts/test-pyth-entropy.js",
     "verify:onchain": "npx hardhat run scripts/verify-onchain.js --network arbitrum-sepolia",
     "deploy:monad": "npx hardhat run scripts/deploy-casino.js --network monad-testnet",
-    "test:monad": "node scripts/test-monad-integration.js",
-    "solana:create-wallet": "node scripts/create-solana-wallet.js",
-    "solana:check-balance": "node scripts/check-solana-balance.js",
-    "test:solana-logging": "node scripts/test-solana-logging.js"
+    "test:monad": "node scripts/test-monad-integration.js"
   },
   "dependencies": {
     "@babel/runtime": "^7.24.0",
@@ -46,15 +43,17 @@
     "@pushchain/core": "^2.1.6",
     "@pushchain/ui-kit": "^2.0.13",
     "@pythnetwork/entropy-sdk-solidity": "^2.0.0",
+    "@rainbow-me/rainbowkit": "^2.2.8",
     "@react-three/drei": "^9.88.0",
     "@react-three/fiber": "^8.14.5",
     "@reduxjs/toolkit": "^1.9.7",
-    "@solana/web3.js": "^1.98.4",
     "@supabase/supabase-js": "^2.57.4",
     "@tanstack/react-query": "^5.75.5",
     "@telegram-apps/bridge": "^1.9.2",
     "@types/three": "^0.176.0",
     "@visx/responsive": "^3.10.2",
+    "@wagmi/connectors": "^5.9.4",
+    "@wagmi/core": "^2.19.0",
     "@wallet-standard/core": "^1.1.1",
     "autoprefixer": "10.4.19",
     "clsx": "^2.1.1",
@@ -86,7 +85,9 @@
     "styled-components": "^6.1.8",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "3.4.3",
-    "three": "^0.176.0"
+    "three": "^0.176.0",
+    "viem": "^2.34.0",
+    "wagmi": "^2.16.4"
   },
   "devDependencies": {
     "@chainlink/contracts": "^0.8.0",

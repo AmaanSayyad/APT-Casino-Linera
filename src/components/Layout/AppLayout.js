@@ -1,5 +1,5 @@
 import React from 'react';
-import { usePushWalletContext, usePushChainClient, PushUI } from '@pushchain/ui-kit';
+import { useAccount } from 'wagmi';
 import WalletConnectionHandler from '../Wallet/WalletConnectionHandler';
 import { useVRFPregeneration } from '../../hooks/useVRFPregeneration';
 import VRFStatusModal from '../VRF/VRFStatusModal';
@@ -9,10 +9,7 @@ import VRFStatusModal from '../VRF/VRFStatusModal';
  * Wraps the entire app with wallet connection handling
  */
 const AppLayout = ({ children }) => {
-  const { connectionStatus } = usePushWalletContext();
-  const { pushChainClient } = usePushChainClient();
-  const isConnected = connectionStatus === PushUI.CONSTANTS.CONNECTION.STATUS.CONNECTED;
-  const address = pushChainClient?.universal?.account || null;
+  const { address, isConnected } = useAccount();
   const {
     vrfStatus,
     totalVRF,

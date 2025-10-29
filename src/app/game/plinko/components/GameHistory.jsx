@@ -8,7 +8,7 @@ export default function GameHistory({ history }) {
   // Open Entropy Explorer link
   const openEntropyExplorer = (txHash) => {
     if (txHash) {
-      const entropyExplorerUrl = `https://entropy-explorer.pyth.network/?chain=arbitrum-sepolia&search=${txHash}`;
+      const entropyExplorerUrl = `https://entropy-explorer.pyth.network/?chain=push-chain-donut&search=${txHash}`;
       window.open(entropyExplorerUrl, '_blank');
     }
   };
@@ -118,31 +118,17 @@ export default function GameHistory({ history }) {
                           <div className="text-yellow-400 font-bold">{game.entropyProof.sequenceNumber && game.entropyProof.sequenceNumber !== '0' ? String(game.entropyProof.sequenceNumber) : ''}</div>
                         </div>
                         <div className="flex gap-1">
-                          {(game.entropyProof.monadExplorerUrl || game.entropyProof.transactionHash || game.entropyProof.pushChainTxHash) && (
+                          {(game.entropyProof.monadExplorerUrl || game.entropyProof.transactionHash) && (
                             <button
                               onClick={() => {
                                 const url = game.entropyProof.monadExplorerUrl || 
-                                           game.entropyProof.pushChainExplorerUrl ||
-                                           `https://donut.push.network/tx/${game.entropyProof.transactionHash || game.entropyProof.pushChainTxHash}`;
+                                           `https://testnet.monadexplorer.com/tx/${game.entropyProof.transactionHash}`;
                                 window.open(url, '_blank');
                               }}
                               className="flex items-center gap-1 px-2 py-1 bg-[#8B2398]/10 border border-[#8B2398]/30 rounded text-[#8B2398] text-xs hover:bg-[#8B2398]/20 transition-colors"
                             >
                               <FaExternalLinkAlt size={8} />
                               Push
-                            </button>
-                          )}
-                          {(game.entropyProof.solanaExplorerUrl || game.solanaTxSignature) && (
-                            <button
-                              onClick={() => {
-                                const url = game.entropyProof.solanaExplorerUrl || 
-                                           `https://explorer.solana.com/tx/${game.solanaTxSignature}?cluster=testnet`;
-                                window.open(url, '_blank');
-                              }}
-                              className="flex items-center gap-1 px-2 py-1 bg-[#14D854]/10 border border-[#14D854]/30 rounded text-[#14D854] text-xs hover:bg-[#14D854]/20 transition-colors"
-                            >
-                              <FaExternalLinkAlt size={8} />
-                              Solana
                             </button>
                           )}
                           {game.entropyProof.transactionHash && (
@@ -152,6 +138,15 @@ export default function GameHistory({ history }) {
                             >
                               <FaExternalLinkAlt size={8} />
                               Entropy
+                            </button>
+                          )}
+                          {game.entropyProof.transactionHash && (
+                            <button
+                              onClick={() => openMonadExplorer(game.entropyProof.transactionHash)}
+                              className="flex items-center gap-1 px-2 py-1 bg-[#8B2398]/10 border border-[#8B2398]/30 rounded text-[#8B2398] text-xs hover:bg-[#8B2398]/20 transition-colors"
+                            >
+                              <FaExternalLinkAlt size={8} />
+                              Push
                             </button>
                           )}
                         </div>
@@ -178,16 +173,6 @@ export default function GameHistory({ history }) {
                         >
                           <FaExternalLinkAlt size={8} />
                           Push
-                        </button>
-                        <button
-                          onClick={() => {
-                            const url = `https://explorer.solana.com/tx/${game.id}?cluster=testnet`;
-                            window.open(url, '_blank');
-                          }}
-                          className="flex items-center gap-1 px-2 py-1 bg-[#14D854]/10 border border-[#14D854]/30 rounded text-[#14D854] text-xs hover:bg-[#14D854]/20 transition-colors"
-                        >
-                          <FaExternalLinkAlt size={8} />
-                          Solana
                         </button>
                       </div>
                     )}

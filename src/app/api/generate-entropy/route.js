@@ -1,10 +1,10 @@
 import { ethers } from 'ethers';
 
-// Pyth Entropy V2 Contract Configuration for Arbitrum Sepolia
-const PYTH_ENTROPY_ADDRESS = '0x549ebba8036ab746611b4ffa1423eb0a4df61440';
-const ARBITRUM_SEPOLIA_RPC = 'https://sepolia-rollup.arbitrum.io/rpc';
+// Pyth Entropy V2 Contract Configuration for Push Chain Donut Testnet
+const PYTH_ENTROPY_ADDRESS = '0x36825bf3fbdf5a29e2d5148bfe7dcf7b5639e320';
+const PUSH_CHAIN_DONUT_RPC = 'https://evm.rpc-testnet-donut-node1.push.org/';
 
-// Minimal ABI for Pyth Entropy V2 on Arbitrum Sepolia
+// Minimal ABI for Pyth Entropy V2 on Push Chain
 const PYTH_ENTROPY_ABI = [
   // Core entrypoint used by consumer contracts
   "function requestWithCallback(address provider, bytes32 userCommitment) external payable returns (uint64)",
@@ -21,12 +21,12 @@ export async function POST(request) {
     console.log('🎲 API: Generating Pyth Entropy...');
     
     // Create provider
-    const provider = new ethers.JsonRpcProvider(ARBITRUM_SEPOLIA_RPC);
+    const provider = new ethers.JsonRpcProvider(PUSH_CHAIN_DONUT_RPC);
     
     // Check if contract exists at this address
     const code = await provider.getCode(PYTH_ENTROPY_ADDRESS);
     if (code === '0x') {
-      throw new Error(`No contract found at address ${PYTH_ENTROPY_ADDRESS} on Arbitrum Sepolia`);
+      throw new Error(`No contract found at address ${PYTH_ENTROPY_ADDRESS} on Push Chain Donut Testnet`);
     }
     console.log('✅ Contract exists at address:', PYTH_ENTROPY_ADDRESS);
     
@@ -39,15 +39,15 @@ export async function POST(request) {
     console.log('✅ Default provider:', defaultProvider);
     
     let fee = await contract.getFee(defaultProvider);
-    console.log('✅ Fee for provider:', ethers.formatEther(fee), 'ETH');
+    console.log('✅ Fee for provider:', ethers.formatEther(fee), 'PC');
     
     // Let's try to call the contract with minimal data to see what happens
     console.log('🧪 Testing contract call with minimal parameters...');
     
-    // Check if we have a private key for signing (use Arbitrum Sepolia treasury)
-    const privateKey = process.env.ARBITRUM_SEPOLIA_PRIVATE_KEY || process.env.TREASURY_PRIVATE_KEY;
+    // Check if we have a private key for signing (use Push Chain Donut treasury)
+    const privateKey = process.env.PUSH_CHAIN_TREASURY_PRIVATE_KEY || process.env.TREASURY_PRIVATE_KEY;
     if (!privateKey) {
-      throw new Error('ARBITRUM_SEPOLIA_PRIVATE_KEY environment variable is required');
+      throw new Error('PUSH_CHAIN_TREASURY_PRIVATE_KEY environment variable is required');
     }
     
     // Create wallet and signer
@@ -60,15 +60,15 @@ export async function POST(request) {
     
     // Request random value from Pyth Entropy
     console.log('🔄 Requesting random value from Pyth Entropy...');
-    console.log('💰 Using fee:', ethers.formatEther(fee), 'ETH');
+    console.log('💰 Using fee:', ethers.formatEther(fee), 'PC');
     console.log('🏦 Wallet address:', wallet.address);
     
     // Check wallet balance first
     const balance = await provider.getBalance(wallet.address);
-    console.log('💳 Wallet balance:', ethers.formatEther(balance), 'ETH');
+    console.log('💳 Wallet balance:', ethers.formatEther(balance), 'PC');
     
     if (balance < fee) {
-      throw new Error(`Insufficient balance. Need ${ethers.formatEther(fee)} ETH, have ${ethers.formatEther(balance)} ETH. Please add more ETH to treasury: ${wallet.address}`);
+      throw new Error(`Insufficient balance. Need ${ethers.formatEther(fee)} PC, have ${ethers.formatEther(balance)} PC. Please add more PC to treasury: ${wallet.address}`);
     }
     
     // Call the canonical V2 method
@@ -113,12 +113,12 @@ export async function POST(request) {
       blockNumber: receipt.blockNumber.toString(),
       // We cannot synchronously read randomness; return placeholder derived from tx for UI
       randomValue: generateRandomFromTxHash(tx.hash),
-      network: 'arbitrum-sepolia',
+      network: 'push-chain-donut',
       // Use tx hash for entropy explorer search to ensure results
-      explorerUrl: `https://entropy-explorer.pyth.network/?chain=arbitrum-sepolia&search=${tx.hash}`,
-      arbitrumExplorerUrl: `https://sepolia.arbiscan.io/tx/${tx.hash}`,
+      explorerUrl: `https://entropy-explorer.pyth.network/?chain=push-chain-donut&search=${tx.hash}`,
+      pushChainExplorerUrl: `https://donut.push.network/tx/${tx.hash}`,
       timestamp: Date.now(),
-      source: 'Pyth Entropy V2 (Arbitrum Sepolia)'
+      source: 'Pyth Entropy V1 (Push Chain Donut)'
     };
     
     console.log('✅ API: Entropy generated successfully');
