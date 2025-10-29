@@ -1,0 +1,60 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { usePushWalletContext, usePushChainClient, PushUI } from '@pushchain/ui-kit';
+// Push Universal Wallet handles network switching automatically
+
+const NetworkSwitcher = () => {
+  const { connectionStatus } = usePushWalletContext();
+  const { pushChainClient } = usePushChainClient();
+  const isConnected = connectionStatus === PushUI.CONSTANTS.CONNECTION.STATUS.CONNECTED;
+  const [isWrongNetwork, setIsWrongNetwork] = useState(false);
+  const [isSwitching, setIsSwitching] = useState(false);
+
+  useEffect(() => {
+    // Push Universal Wallet is always on the correct network
+    if (isConnected) {
+      setIsWrongNetwork(false);
+    }
+  }, [isConnected]);
+
+  const handleSwitchNetwork = async () => {
+    if (!isConnected) return;
+
+    setIsSwitching(true);
+    try {
+      // Push Universal Wallet handles network switching automatically
+      console.log('Push Universal Wallet is already on the correct network');
+    } catch (error) {
+      console.error('Network switch error:', error);
+    } finally {
+      setIsSwitching(false);
+    }
+  };
+
+  if (!isConnected || !isWrongNetwork) {
+    return null;
+  }
+
+  return (
+    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
+      <div className="bg-red-600/90 backdrop-blur-sm text-white px-6 py-3 rounded-lg border border-red-500/50 shadow-lg">
+        <div className="flex items-center space-x-4">
+          <div className="flex-1">
+            <p className="font-medium">Wrong Network</p>
+            <p className="text-sm text-red-200">Please switch to Push Chain Donut Testnet to use this app</p>
+          </div>
+          <button
+            onClick={handleSwitchNetwork}
+            disabled={isSwitching}
+            className="bg-white/20 hover:bg-white/30 disabled:opacity-50 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+          >
+            {isSwitching ? 'Switching...' : 'Switch Network'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default NetworkSwitcher;
