@@ -145,6 +145,19 @@ export default function GameHistory({ history }) {
                               Solana
                             </button>
                           )}
+                          {(game.lineraExplorerUrl || game.lineraChainId) && (
+                            <button
+                              onClick={() => {
+                                const url = game.lineraExplorerUrl || 
+                                           `https://explorer.linera.io/chain/${game.lineraChainId}/block/${game.lineraBlockHeight}`;
+                                window.open(url, '_blank');
+                              }}
+                              className="flex items-center gap-1 px-2 py-1 bg-[#3B82F6]/10 border border-[#3B82F6]/30 rounded text-[#3B82F6] text-xs hover:bg-[#3B82F6]/20 transition-colors"
+                            >
+                              <FaExternalLinkAlt size={8} />
+                              Linera
+                            </button>
+                          )}
                           {game.entropyProof.transactionHash && (
                             <button
                               onClick={() => openEntropyExplorer(game.entropyProof.transactionHash)}

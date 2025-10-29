@@ -29,6 +29,7 @@ The traditional online gambling industry suffers from several issues:
 APT Casino addresses these problems by offering:
 
 - **Provably Fair Gaming**: Powered by Pyth Entropy
+- **Multi-Blockchain Logging**: Game results logged to Push Chain, Solana, and Linera for maximum transparency
 
 ![commit_and_reveal](https://github.com/user-attachments/assets/cbb150e8-7d22-4903-9729-8ad00c20f1d5)
 
@@ -48,6 +49,10 @@ APT Casino addresses these problems by offering:
 
 - **Pyth Entropy**: Cryptographically secure randomness
 - **On-Chain Verification**: All game outcomes verifiable
+- **Multi-Blockchain Transparency**: Game results logged to:
+  - 🔗 **Push Chain**: Primary gaming blockchain
+  - ☀️ **Solana**: High-speed transaction logging
+  - ⚡ **Linera**: Fast game logic with temporary chains
 - **Transparent Mechanics**: Open-source game logic
 
 ### 2. Multi-Chain Architecture
@@ -287,3 +292,35 @@ graph TB
 
 - **Pitch Deck:** https://www.figma.com/slides/XVZxZ2Y91I9h9P8M7zMWL4/APT-Casino-Push?node-id=0-1&t=BIcQweSEa990geiI-1
 - **Live URL:** https://apt-casino-push-chain.vercel.app/
+
+## ⚡ Linera Integration
+
+APT Casino leverages Linera's fast game logic for enhanced gaming experience:
+
+### Features
+- **Fast Game Logging**: Utilizes Linera's temporary chains for rapid game result logging
+- **Parallel Processing**: Game results logged simultaneously to Push Chain, Solana, and Linera
+- **Transparent History**: Each game shows blockchain badges for all logged transactions
+- **Explorer Integration**: Direct links to Linera explorer for transaction verification
+
+### Technical Implementation
+- **Linera SDK Integration**: Custom game logger application
+- **Temporary Chains**: Each game session can create temporary chains for isolated logging
+- **Message Passing**: Efficient communication between main chain and game chains
+- **Fast Finality**: Near-instant transaction confirmation
+
+### Game History Badges
+In the game history, you'll see blockchain badges indicating where each game result was logged:
+- 🔗 **Push Chain**: Primary blockchain with entropy verification
+- ☀️ **Solana**: High-speed logging for redundancy
+- ⚡ **Linera**: Fast game logic with temporary chain support
+- 🎲 **Pyth Entropy**: Randomness verification
+
+### Configuration
+Set up Linera configuration in your `.env` file:
+```bash
+NEXT_PUBLIC_LINERA_RPC=http://localhost:8080
+NEXT_PUBLIC_LINERA_EXPLORER=https://explorer.linera.io
+NEXT_PUBLIC_LINERA_CHAIN_ID=default_chain
+NEXT_PUBLIC_LINERA_APP_ID=casino_game_logger
+```

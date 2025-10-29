@@ -252,37 +252,53 @@ export default function Plinko() {
         console.error('❌ Push Chain logging failed (Plinko):', error);
       }
 
-      // Log game result to Solana
-      try {
-        const solanaResponse = await fetch('/api/log-to-solana', {
+      // Log game result to all blockchains (Push Chain, Solana, Linera) in parallel
+      const gameLogData = {
+        gameType: 'PLINKO',
+        gameResult: {
+          multiplier: newBetResult.multiplier,
+          payout: newBetResult.payout,
+          rows: currentRows,
+          riskLevel: currentRiskLevel
+        },
+        playerAddress: 'unknown', // Will be updated when wallet integration is available
+        betAmount: newBetResult.betAmount || 0,
+        payout: newBetResult.payout || 0,
+        entropyProof: enhancedBetResult.entropyProof
+      };
+
+      // Parallel blockchain logging
+      const [solanaResult, lineraResult] = await Promise.allSettled([
+        // Solana logging
+        fetch('/api/log-to-solana', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            gameType: 'PLINKO',
-            gameResult: {
-              multiplier: newBetResult.multiplier,
-              payout: newBetResult.payout,
-              rows: newBetResult.rows || 'unknown',
-              riskLevel: newBetResult.riskLevel || 'unknown'
-            },
-            playerAddress: 'unknown', // Will be updated when wallet integration is available
-            betAmount: newBetResult.betAmount || 0,
-            payout: newBetResult.payout || 0,
-            entropyProof: enhancedBetResult.entropyProof
-          })
-        });
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(gameLogData)
+        }).then(res => res.json()).catch(err => ({ success: false, error: err.message })),
         
-        const solanaResult = await solanaResponse.json();
-        console.log('🔗 Solana logging result (Plinko):', solanaResult);
-        
-        if (solanaResult.success) {
-          enhancedBetResult.entropyProof.solanaTxSignature = solanaResult.transactionSignature;
-          enhancedBetResult.entropyProof.solanaExplorerUrl = solanaResult.solanaExplorerUrl;
-        }
-      } catch (error) {
-        console.error('❌ Solana logging failed (Plinko):', error);
+        // Linera logging
+        fetch('/api/log-to-linera', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(gameLogData)
+        }).then(res => res.json()).catch(err => ({ success: false, error: err.message }))
+      ]);
+
+      // Process Solana result
+      const solanaLogResult = solanaResult.status === 'fulfilled' ? solanaResult.value : { success: false, error: solanaResult.reason };
+      console.log('☀️ Solana logging result (Plinko):', solanaLogResult);
+      if (solanaLogResult.success) {
+        enhancedBetResult.solanaTxSignature = solanaLogResult.transactionSignature;
+        enhancedBetResult.solanaExplorerUrl = solanaLogResult.solanaExplorerUrl;
+      }
+
+      // Process Linera result
+      const lineraLogResult = lineraResult.status === 'fulfilled' ? lineraResult.value : { success: false, error: lineraResult.reason };
+      console.log('⚡ Linera logging result (Plinko):', lineraLogResult);
+      if (lineraLogResult.success) {
+        enhancedBetResult.lineraChainId = lineraLogResult.chainId;
+        enhancedBetResult.lineraBlockHeight = lineraLogResult.blockHeight;
+        enhancedBetResult.lineraExplorerUrl = lineraLogResult.lineraExplorerUrl;
       }
       
       console.log('📝 Enhanced bet result:', enhancedBetResult);

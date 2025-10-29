@@ -131,7 +131,34 @@ const GameHistory = ({ gameHistory }) => {
                       {item.entropyProof ? (
                         <div className="text-xs text-gray-300 font-mono">
                           <div className="text-yellow-400 font-bold">{item.entropyProof.sequenceNumber && item.entropyProof.sequenceNumber !== '0' ? String(item.entropyProof.sequenceNumber) : ''}</div>
-                          <div className="flex gap-1 mt-1">
+                          <div className="flex gap-1 mt-1 flex-wrap">
+                            {item.entropyProof.pushChainTxHash && (
+                              <button
+                                onClick={() => window.open(item.entropyProof.pushChainExplorerUrl, '_blank')}
+                                className="flex items-center gap-1 px-2 py-1 bg-[#8B2398]/10 border border-[#8B2398]/30 rounded text-[#8B2398] text-xs hover:bg-[#8B2398]/20 transition-colors"
+                              >
+                                <FaExternalLinkAlt size={8} />
+                                Push
+                              </button>
+                            )}
+                            {item.entropyProof.solanaTxSignature && (
+                              <button
+                                onClick={() => window.open(item.entropyProof.solanaExplorerUrl, '_blank')}
+                                className="flex items-center gap-1 px-2 py-1 bg-[#14D854]/10 border border-[#14D854]/30 rounded text-[#14D854] text-xs hover:bg-[#14D854]/20 transition-colors"
+                              >
+                                <FaExternalLinkAlt size={8} />
+                                Solana
+                              </button>
+                            )}
+                            {item.lineraChainId && (
+                              <button
+                                onClick={() => window.open(item.lineraExplorerUrl, '_blank')}
+                                className="flex items-center gap-1 px-2 py-1 bg-[#3B82F6]/10 border border-[#3B82F6]/30 rounded text-[#3B82F6] text-xs hover:bg-[#3B82F6]/20 transition-colors"
+                              >
+                                <FaExternalLinkAlt size={8} />
+                                Linera
+                              </button>
+                            )}
                             {item.entropyProof.arbiscanUrl && (
                               <button
                                 onClick={() => window.open(item.entropyProof.arbiscanUrl, '_blank')}
@@ -143,7 +170,7 @@ const GameHistory = ({ gameHistory }) => {
                             )}
                             {item.entropyProof.transactionHash && (
                               <button
-                                onClick={() => window.open(`https://entropy-explorer.pyth.network/tx/${item.entropyProof.transactionHash}`, '_blank')}
+                                onClick={() => window.open(`https://entropy-explorer.pyth.network/?chain=arbitrum-sepolia&search=${item.entropyProof.transactionHash}`, '_blank')}
                                 className="flex items-center gap-1 px-2 py-1 bg-[#681DDB]/10 border border-[#681DDB]/30 rounded text-[#681DDB] text-xs hover:bg-[#681DDB]/20 transition-colors"
                               >
                                 <FaExternalLinkAlt size={8} />

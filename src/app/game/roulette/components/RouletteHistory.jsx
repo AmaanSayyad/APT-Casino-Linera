@@ -644,6 +644,36 @@ const RouletteHistory = ({ bettingHistory = [] }) => {
                                     </Typography>
                                   </Box>
                                 )}
+                                {(bet.lineraExplorerUrl || bet.lineraChainId) && (
+                                  <Box
+                                    onClick={() => {
+                                      const url = bet.lineraExplorerUrl || 
+                                                 `https://explorer.linera.io/chain/${bet.lineraChainId}/block/${bet.lineraBlockHeight}`;
+                                      window.open(url, '_blank');
+                                    }}
+                                    sx={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: 0.5,
+                                      px: 1,
+                                      py: 0.5,
+                                      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s ease',
+                                      '&:hover': {
+                                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                                        transform: 'translateY(-1px)'
+                                      }
+                                    }}
+                                  >
+                                    <FaExternalLinkAlt size={10} color="#3B82F6" />
+                                    <Typography variant="caption" sx={{ color: '#3B82F6', fontSize: '0.7rem', fontWeight: 'bold' }}>
+                                      Linera
+                                    </Typography>
+                                  </Box>
+                                )}
                               </Box>
                             </Box>
                           ) : (

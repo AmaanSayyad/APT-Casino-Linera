@@ -1,13 +1,14 @@
 /**
- * Push Chain Logger Utility
- * Oyun sonuçlarını Push Chain Donut testnet'e loglar
+ * Linera Logger Utility
+ * Oyun sonuçlarını Linera blockchain'e loglar
+ * Linera'nın fast game logic yapısını kullanır
  */
 
-export const logGameResultToPushChain = async (gameData) => {
+export const logGameResultToLinera = async (gameData) => {
   try {
-    console.log('🎮 Logging game result to Push Chain:', gameData);
+    console.log('🎮 Logging game result to Linera:', gameData);
 
-    const response = await fetch('/api/log-to-push', {
+    const response = await fetch('/api/log-to-linera', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -18,26 +19,28 @@ export const logGameResultToPushChain = async (gameData) => {
     const result = await response.json();
 
     if (result.success) {
-      console.log('✅ Game result logged to Push Chain successfully');
-      console.log('🔗 Transaction Hash:', result.transactionHash);
-      console.log('🌐 Push Chain Explorer:', result.pushChainExplorerUrl);
+      console.log('✅ Game result logged to Linera successfully');
+      console.log('🔗 Chain ID:', result.chainId);
+      console.log('🔗 Block Height:', result.blockHeight);
+      console.log('🌐 Linera Explorer:', result.lineraExplorerUrl);
       
       return {
         success: true,
-        transactionHash: result.transactionHash,
-        blockNumber: result.blockNumber,
-        pushChainExplorerUrl: result.pushChainExplorerUrl,
+        chainId: result.chainId,
+        blockHeight: result.blockHeight,
+        messageId: result.messageId,
+        lineraExplorerUrl: result.lineraExplorerUrl,
         gameData: result.gameData
       };
     } else {
-      console.error('❌ Failed to log game result to Push Chain:', result.error);
+      console.error('❌ Failed to log game result to Linera:', result.error);
       return {
         success: false,
         error: result.error
       };
     }
   } catch (error) {
-    console.error('❌ Error logging game result to Push Chain:', error);
+    console.error('❌ Error logging game result to Linera:', error);
     return {
       success: false,
       error: error.message
@@ -48,7 +51,7 @@ export const logGameResultToPushChain = async (gameData) => {
 /**
  * Oyun sonuçlarını Push Chain, Solana ve Linera'ya loglar
  */
-export const logCompleteGameResult = async (gameType, gameResult, playerAddress, betAmount, payout, entropyProof) => {
+export const logCompleteGameResultWithLinera = async (gameType, gameResult, playerAddress, betAmount, payout, entropyProof) => {
   const gameData = {
     gameType,
     gameResult,
@@ -62,7 +65,11 @@ export const logCompleteGameResult = async (gameType, gameResult, playerAddress,
   // Paralel olarak tüm blockchain'lere logla
   const [pushResult, solanaResult, lineraResult] = await Promise.allSettled([
     // Push Chain'e logla
-    logGameResultToPushChain(gameData),
+    fetch('/api/log-to-push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(gameData),
+    }).then(res => res.json()).catch(err => ({ success: false, error: err.message })),
     
     // Solana'ya logla
     fetch('/api/log-to-solana', {
@@ -72,11 +79,7 @@ export const logCompleteGameResult = async (gameType, gameResult, playerAddress,
     }).then(res => res.json()).catch(err => ({ success: false, error: err.message })),
     
     // Linera'ya logla
-    fetch('/api/log-to-linera', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(gameData),
-    }).then(res => res.json()).catch(err => ({ success: false, error: err.message }))
+    logGameResultToLinera(gameData)
   ]);
 
   const pushChainResult = pushResult.status === 'fulfilled' ? pushResult.value : { success: false, error: pushResult.reason };
@@ -108,6 +111,6 @@ export const logCompleteGameResult = async (gameType, gameResult, playerAddress,
 };
 
 export default {
-  logGameResultToPushChain,
-  logCompleteGameResult
+  logGameResultToLinera,
+  logCompleteGameResultWithLinera
 };

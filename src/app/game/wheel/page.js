@@ -142,38 +142,61 @@ export default function Home() {
           console.log('🔗 Push Chain TX Hash:', pushResult.transactionHash);
           console.log('🔗 Push Chain Explorer URL:', pushResult.pushChainExplorerUrl);
 
-          // Log to Solana as well
-          const solanaResponse = await fetch('/api/log-to-solana', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
+          // Log to all blockchains (Solana and Linera) in parallel
+          const gameLogData = {
+            gameType: 'WHEEL',
+            gameResult: {
+              multiplier: targetHistoryItem.multiplier,
+              payout: targetHistoryItem.payout,
+              segments: targetHistoryItem.segments || 'unknown'
             },
-            body: JSON.stringify({
-              gameType: 'WHEEL',
-              gameResult: {
-                multiplier: targetHistoryItem.multiplier,
-                payout: targetHistoryItem.payout,
-                segments: targetHistoryItem.segments || 'unknown'
-              },
-              playerAddress: 'unknown', // Will be updated when wallet integration is available
-              betAmount: targetHistoryItem.betAmount || 0,
-              payout: targetHistoryItem.payout || 0,
-              entropyProof: {
-                requestId: entropyResult.entropyProof?.requestId,
-                sequenceNumber: entropyResult.entropyProof?.sequenceNumber,
-                randomValue: entropyResult.randomValue,
-                transactionHash: entropyResult.entropyProof?.transactionHash,
-                timestamp: entropyResult.entropyProof?.timestamp
-              }
-            })
-          });
+            playerAddress: 'unknown', // Will be updated when wallet integration is available
+            betAmount: targetHistoryItem.betAmount || 0,
+            payout: targetHistoryItem.payout || 0,
+            entropyProof: {
+              requestId: entropyResult.entropyProof?.requestId,
+              sequenceNumber: entropyResult.entropyProof?.sequenceNumber,
+              randomValue: entropyResult.randomValue,
+              transactionHash: entropyResult.entropyProof?.transactionHash,
+              timestamp: entropyResult.entropyProof?.timestamp
+            }
+          };
+
+          // Parallel blockchain logging
+          const [solanaResult, lineraResult] = await Promise.allSettled([
+            // Solana logging
+            fetch('/api/log-to-solana', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(gameLogData)
+            }).then(res => res.json()).catch(err => ({ success: false, error: err.message })),
+            
+            // Linera logging
+            fetch('/api/log-to-linera', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(gameLogData)
+            }).then(res => res.json()).catch(err => ({ success: false, error: err.message }))
+          ]);
+
+          // Process Solana result
+          const solanaLogResult = solanaResult.status === 'fulfilled' ? solanaResult.value : { success: false, error: solanaResult.reason };
+          console.log('☀️ Solana logging result (Wheel):', solanaLogResult);
+          if (solanaLogResult.success) {
+            console.log('🔗 Solana TX Signature:', solanaLogResult.transactionSignature);
+            console.log('🔗 Solana Explorer URL:', solanaLogResult.solanaExplorerUrl);
+          }
+
+          // Process Linera result
+          const lineraLogResult = lineraResult.status === 'fulfilled' ? lineraResult.value : { success: false, error: lineraResult.reason };
+          console.log('⚡ Linera logging result (Wheel):', lineraLogResult);
+          if (lineraLogResult.success) {
+            console.log('🔗 Linera Chain ID:', lineraLogResult.chainId);
+            console.log('🔗 Linera Block Height:', lineraLogResult.blockHeight);
+            console.log('🔗 Linera Explorer URL:', lineraLogResult.lineraExplorerUrl);
+          }
           
-          const solanaResult = await solanaResponse.json();
-          console.log('🔗 Solana logging result (Wheel):', solanaResult);
-          console.log('🔗 Solana TX Signature:', solanaResult.transactionSignature);
-          console.log('🔗 Solana Explorer URL:', solanaResult.solanaExplorerUrl);
-          
-          // Update the history item with real entropy proof, Push Chain and Solana info
+          // Update the history item with real entropy proof, Push Chain, Solana and Linera info
           console.log('🔄 Updating history item with ID:', historyItemId);
           setGameHistory(prev => {
             const updated = prev.map(item => 
@@ -192,9 +215,13 @@ export default function Home() {
                       source: 'Pyth Entropy',
                       pushChainTxHash: pushResult.success ? pushResult.transactionHash : null,
                       pushChainExplorerUrl: pushResult.success ? pushResult.pushChainExplorerUrl : null,
-                      solanaTxSignature: solanaResult.success ? solanaResult.transactionSignature : null,
-                      solanaExplorerUrl: solanaResult.success ? solanaResult.solanaExplorerUrl : null
-                    }
+                      solanaTxSignature: solanaLogResult.success ? solanaLogResult.transactionSignature : null,
+                      solanaExplorerUrl: solanaLogResult.success ? solanaLogResult.solanaExplorerUrl : null
+                    },
+                    // Add Linera data to main item
+                    lineraChainId: lineraLogResult.success ? lineraLogResult.chainId : null,
+                    lineraBlockHeight: lineraLogResult.success ? lineraLogResult.blockHeight : null,
+                    lineraExplorerUrl: lineraLogResult.success ? lineraLogResult.lineraExplorerUrl : null
                   }
                 : item
             );

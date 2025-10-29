@@ -248,37 +248,53 @@ export default function Mines() {
         console.error('❌ Push Chain logging failed (Mines):', error);
       }
 
-      // Log game result to Solana
-      try {
-        const solanaResponse = await fetch('/api/log-to-solana', {
+      // Log game result to all blockchains (Solana and Linera) in parallel
+      const gameLogData = {
+        gameType: 'MINES',
+        gameResult: {
+          mines: result.mines,
+          outcome: result.won ? 'win' : 'loss',
+          multiplier: result.multiplier,
+          payout: result.payout
+        },
+        playerAddress: 'unknown', // Will be updated when wallet integration is available
+        betAmount: result.betAmount || 0,
+        payout: result.payout || 0,
+        entropyProof: entropyProof
+      };
+
+      // Parallel blockchain logging
+      const [solanaResult, lineraResult] = await Promise.allSettled([
+        // Solana logging
+        fetch('/api/log-to-solana', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            gameType: 'MINES',
-            gameResult: {
-              mines: result.mines,
-              outcome: result.won ? 'win' : 'loss',
-              multiplier: result.multiplier,
-              payout: result.payout
-            },
-            playerAddress: 'unknown', // Will be updated when wallet integration is available
-            betAmount: result.betAmount || 0,
-            payout: result.payout || 0,
-            entropyProof: entropyProof
-          })
-        });
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(gameLogData)
+        }).then(res => res.json()).catch(err => ({ success: false, error: err.message })),
         
-        const solanaResult = await solanaResponse.json();
-        console.log('🔗 Solana logging result (Mines):', solanaResult);
-        
-        if (solanaResult.success) {
-          entropyProof.solanaTxSignature = solanaResult.transactionSignature;
-          entropyProof.solanaExplorerUrl = solanaResult.solanaExplorerUrl;
-        }
-      } catch (error) {
-        console.error('❌ Solana logging failed (Mines):', error);
+        // Linera logging
+        fetch('/api/log-to-linera', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(gameLogData)
+        }).then(res => res.json()).catch(err => ({ success: false, error: err.message }))
+      ]);
+
+      // Process Solana result
+      const solanaLogResult = solanaResult.status === 'fulfilled' ? solanaResult.value : { success: false, error: solanaResult.reason };
+      console.log('☀️ Solana logging result (Mines):', solanaLogResult);
+      if (solanaLogResult.success) {
+        entropyProof.solanaTxSignature = solanaLogResult.transactionSignature;
+        entropyProof.solanaExplorerUrl = solanaLogResult.solanaExplorerUrl;
+      }
+
+      // Process Linera result
+      const lineraLogResult = lineraResult.status === 'fulfilled' ? lineraResult.value : { success: false, error: lineraResult.reason };
+      console.log('⚡ Linera logging result (Mines):', lineraLogResult);
+      if (lineraLogResult.success) {
+        entropyProof.lineraChainId = lineraLogResult.chainId;
+        entropyProof.lineraBlockHeight = lineraLogResult.blockHeight;
+        entropyProof.lineraExplorerUrl = lineraLogResult.lineraExplorerUrl;
       }
     } catch (error) {
       console.error('❌ Error using Pyth Entropy for Mines game:', error);

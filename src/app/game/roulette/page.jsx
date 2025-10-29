@@ -2080,50 +2080,70 @@ export default function GameRoulette() {
               console.error('❌ Push Chain logging failed:', error);
             });
 
-          // Log game result to Solana
-          fetch('/api/log-to-solana', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
+          // Log game result to all blockchains (Solana and Linera) in parallel
+          const gameLogData = {
+            gameType: 'ROULETTE',
+            gameResult: {
+              winningNumber,
+              totalBets: allBets.length,
+              winningBets: winningBets.length,
+              losingBets: losingBets.length
             },
-            body: JSON.stringify({
-              gameType: 'ROULETTE',
-              gameResult: {
-                winningNumber,
-                totalBets: allBets.length,
-                winningBets: winningBets.length,
-                losingBets: losingBets.length
-              },
-              playerAddress: address || 'unknown',
-              betAmount: totalBetAmount,
-              payout: netResult,
-              entropyProof: newBet.entropyProof
-            })
-          }).then(response => response.json())
-            .then(solanaResult => {
-              console.log('🔗 Solana logging result:', solanaResult);
-              if (solanaResult.success) {
-                // Add Solana info to bet result
-                newBet.solanaTxSignature = solanaResult.transactionSignature;
-                newBet.solanaExplorerUrl = solanaResult.solanaExplorerUrl;
-                
-                // Update betting history with Solana info
-                setBettingHistory(prev => {
-                  const updatedHistory = [...prev];
-                  if (updatedHistory.length > 0) {
-                    updatedHistory[0] = { 
-                      ...updatedHistory[0], 
-                      solanaTxSignature: solanaResult.transactionSignature,
-                      solanaExplorerUrl: solanaResult.solanaExplorerUrl
-                    };
-                  }
-                  return updatedHistory;
-                });
+            playerAddress: address || 'unknown',
+            betAmount: totalBetAmount,
+            payout: netResult,
+            entropyProof: newBet.entropyProof
+          };
+
+          // Parallel blockchain logging
+          Promise.allSettled([
+            // Solana logging
+            fetch('/api/log-to-solana', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(gameLogData)
+            }).then(res => res.json()).catch(err => ({ success: false, error: err.message })),
+            
+            // Linera logging
+            fetch('/api/log-to-linera', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(gameLogData)
+            }).then(res => res.json()).catch(err => ({ success: false, error: err.message }))
+          ]).then(([solanaResult, lineraResult]) => {
+            // Process Solana result
+            const solanaLogResult = solanaResult.status === 'fulfilled' ? solanaResult.value : { success: false, error: solanaResult.reason };
+            console.log('☀️ Solana logging result (Roulette):', solanaLogResult);
+            if (solanaLogResult.success) {
+              newBet.solanaTxSignature = solanaLogResult.transactionSignature;
+              newBet.solanaExplorerUrl = solanaLogResult.solanaExplorerUrl;
+            }
+
+            // Process Linera result
+            const lineraLogResult = lineraResult.status === 'fulfilled' ? lineraResult.value : { success: false, error: lineraResult.reason };
+            console.log('⚡ Linera logging result (Roulette):', lineraLogResult);
+            if (lineraLogResult.success) {
+              newBet.lineraChainId = lineraLogResult.chainId;
+              newBet.lineraBlockHeight = lineraLogResult.blockHeight;
+              newBet.lineraExplorerUrl = lineraLogResult.lineraExplorerUrl;
+            }
+            
+            // Update betting history with all blockchain info
+            setBettingHistory(prev => {
+              const updatedHistory = [...prev];
+              if (updatedHistory.length > 0) {
+                updatedHistory[0] = { 
+                  ...updatedHistory[0], 
+                  solanaTxSignature: solanaLogResult.success ? solanaLogResult.transactionSignature : null,
+                  solanaExplorerUrl: solanaLogResult.success ? solanaLogResult.solanaExplorerUrl : null,
+                  lineraChainId: lineraLogResult.success ? lineraLogResult.chainId : null,
+                  lineraBlockHeight: lineraLogResult.success ? lineraLogResult.blockHeight : null,
+                  lineraExplorerUrl: lineraLogResult.success ? lineraLogResult.lineraExplorerUrl : null
+                };
               }
-            })
-            .catch(error => {
-              console.error('❌ Solana logging failed:', error);
+              return updatedHistory;
             });
+          });
           
           // Update betting history with entropy proof
           setBettingHistory(prev => {
