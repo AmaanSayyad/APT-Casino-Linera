@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  linera-network:
+    image: "us-docker.pkg.dev/linera-io-dev/linera-public-registry/linera:latest"
+    container_name: linera-network
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+      - "19100:19100"
+    volumes:
+      - linera-data:/tmp/linera
+    working_dir: /tmp/linera
+    command:
+      - sh
+      - -c
+      - |
+        echo "🚀 Starting Linera Network with net up..."
+        
+        # Set environment variables
+        export LINERA_TMP_DIR=/tmp/linera
+        export LINERA_WALLET=/tmp/linera/wallet.json
+        export LINERA_KEYSTORE=/tmp/linera/keystore.json
+        export LINERA_STORAGE="rocksdb:/tmp/linera/client.db"
+        
+        # Create directories
+        mkdir -p /tmp/linera
+        
+        echo "🌐 Starting Linera local network..."
+        /linera net up --with-faucet --faucet-port 8080 --path /tmp/linera &
+        
+        # Wait for network to start
+        sleep 30
+        
+        echo "✅ Linera network started!"
+        echo "🌐 Faucet: http://localhost:8080"
+        echo "📊 GraphQL: http://localhost:8080/graphql"
+        
+        # Keep container running and show logs
+        tail -f /tmp/linera/*.log 2>/dev/null || tail -f /dev/null
+    environment:
+      - RUST_LOG=info
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+volumes:
+  linera-data:
+    driver: local

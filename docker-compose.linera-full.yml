@@ -1,0 +1,134 @@
+version: '3.8'
+
+services:
+  scylla-setup:
+    image: ubuntu:24.04
+    container_name: scylla-setup
+    privileged: true
+    volumes:
+      - /proc:/host/proc
+      - /sys:/host/sys
+      - /etc/sysctl.d:/host/sysctl.d
+      - ./linera-protocol/docker/compose-scylla-setup.sh:/setup.sh:ro
+    command: ["/bin/bash", "/setup.sh", "--persist"]
+    restart: "no"
+
+  scylla:
+    image: scylladb/scylla:6.2.3
+    container_name: scylla
+    volumes:
+      - linera-scylla-data:/var/lib/scylla
+    environment:
+      SCYLLA_AUTO_CONF: 1
+    command:
+      - "--developer-mode"
+      - "0"
+      - "--overprovisioned"
+      - "1"
+    depends_on:
+      scylla-setup:
+        condition: service_completed_successfully
+    ports:
+      - "9042:9042"
+
+  proxy:
+    image: "us-docker.pkg.dev/linera-io-dev/linera-public-registry/linera:latest"
+    container_name: linera-proxy
+    ports:
+      - "8080:8080"
+      - "19100:19100"
+    command:
+      - /linera-proxy
+      - --storage
+      - scylladb:tcp:scylla:9042
+      - --storage-replication-factor
+      - "1"
+      - /config/server.json
+    volumes:
+      - ./linera-config:/config
+    depends_on:
+      shard-init:
+        condition: service_completed_successfully
+
+  shard:
+    image: "us-docker.pkg.dev/linera-io-dev/linera-public-registry/linera:latest"
+    deploy:
+      replicas: 1
+    command:
+      - /linera-server
+      - run
+      - --storage
+      - scylladb:tcp:scylla:9042
+      - --server
+      - /config/server.json
+      - --shard
+      - "0"
+      - --storage-replication-factor
+      - "1"
+    volumes:
+      - ./linera-config:/config
+    depends_on:
+      shard-init:
+        condition: service_completed_successfully
+
+  shard-init:
+    image: "us-docker.pkg.dev/linera-io-dev/linera-public-registry/linera:latest"
+    container_name: shard-init
+    command:
+      - sh
+      - -c
+      - |
+        while true; do
+          /linera storage check-existence --storage scylladb:tcp:scylla:9042
+          status=$?
+          if [ $status -eq 0 ]; then
+            echo "Database already exists, no need to initialize."
+            exit 0
+          elif [ $status -eq 1 ]; then
+            echo "Database does not exist, attempting to initialize..."
+            if /linera storage initialize --storage scylladb:tcp:scylla:9042 --genesis /config/genesis.json; then
+              echo "Initialization successful."
+              exit 0
+            else
+              echo "Initialization failed, retrying in 5 seconds..."
+              sleep 5
+            fi
+          else
+            echo "An unexpected error occurred (status: $status), retrying in 5 seconds..."
+            sleep 5
+          fi
+        done
+    volumes:
+      - ./linera-config:/config
+    depends_on:
+      scylla-setup:
+        condition: service_completed_successfully
+      scylla:
+        condition: service_started
+
+  faucet:
+    image: "us-docker.pkg.dev/linera-io-dev/linera-public-registry/linera:latest"
+    container_name: linera-faucet
+    ports:
+      - "8081:8081"
+    command:
+      - /linera
+      - faucet
+      - --storage
+      - scylladb:tcp:scylla:9042
+      - --port
+      - "8081"
+      - --amount
+      - "1000"
+    volumes:
+      - ./linera-config:/config
+    depends_on:
+      proxy:
+        condition: service_started
+    environment:
+      - LINERA_WALLET=/config/wallet.json
+      - LINERA_KEYSTORE=/config/keystore.json
+
+volumes:
+  linera-scylla-data:
+    driver: local

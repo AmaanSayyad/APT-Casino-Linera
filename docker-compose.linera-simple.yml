@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  linera-node:
+    image: "us-docker.pkg.dev/linera-io-dev/linera-public-registry/linera:latest"
+    container_name: linera-node
+    ports:
+      - "8080:8080"
+      - "19100:19100"
+      - "8081:8081"
+    volumes:
+      - ./linera-data:/data
+      - ./linera-config:/config
+    working_dir: /data
+    command:
+      - sh
+      - -c
+      - |
+        echo "🚀 Starting Linera Local Network..."
+        
+        # Set environment variables
+        export LINERA_WALLET=/data/wallet.json
+        export LINERA_KEYSTORE=/data/keystore.json
+        export LINERA_STORAGE="rocksdb:/data/storage"
+        
+        # Create directories
+        mkdir -p /data/storage
+        
+        # Initialize storage if not exists
+        if [ ! -f /data/initialized ]; then
+          echo "📦 Initializing Linera storage..."
+          /linera storage initialize --storage "rocksdb:/data/storage" --genesis /config/genesis.json
+          touch /data/initialized
+        fi
+        
+        # Start services in background
+        echo "🌐 Starting Linera proxy..."
+        /linera-proxy --storage "rocksdb:/data/storage" /config/server.json &
+        
+        echo "🏗️ Starting Linera server..."
+        /linera-server run --storage "rocksdb:/data/storage" --server /config/server.json --shard 0 &
+        
+        # Wait a bit for services to start
+        sleep 10
+        
+        echo "💧 Starting Linera faucet..."
+        /linera faucet --storage "rocksdb:/data/storage" --port 8081 --amount 1000 &
+        
+        echo "✅ All services started!"
+        echo "🌐 GraphQL endpoint: http://localhost:8080/graphql"
+        echo "💧 Faucet: http://localhost:8081"
+        
+        # Keep container running
+        tail -f /dev/null
+    environment:
+      - RUST_LOG=info
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  linera-data:
+    driver: local

@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  linera-proxy:
+    image: us-docker.pkg.dev/linera-io-dev/linera-public-registry/linera:latest
+    container_name: linera-proxy
+    ports:
+      - "8080:8080"
+      - "19100:19100"
+    command:
+      - sh
+      - -c
+      - |
+        # Create a simple in-memory storage configuration
+        mkdir -p /tmp/linera
+        cd /tmp/linera
+        
+        # Initialize storage
+        ./linera storage initialize --storage memory --genesis /tmp/genesis.json || true
+        
+        # Start proxy
+        ./linera-proxy --storage memory /tmp/server.json
+    volumes:
+      - ./linera-config:/tmp
+    environment:
+      - RUST_LOG=info
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  linera-server:
+    image: us-docker.pkg.dev/linera-io-dev/linera-public-registry/linera:latest
+    container_name: linera-server
+    command:
+      - sh
+      - -c
+      - |
+        cd /tmp/linera
+        ./linera-server run --storage memory --server /tmp/server.json --shard 0
+    volumes:
+      - ./linera-config:/tmp
+    depends_on:
+      - linera-proxy
+    environment:
+      - RUST_LOG=info
+
+  linera-faucet:
+    image: us-docker.pkg.dev/linera-io-dev/linera-public-registry/linera:latest
+    container_name: linera-faucet
+    ports:
+      - "8081:8081"
+    command:
+      - sh
+      - -c
+      - |
+        cd /tmp/linera
+        ./linera-faucet --storage memory --port 8081
+    volumes:
+      - ./linera-config:/tmp
+    depends_on:
+      - linera-proxy
+    environment:
+      - RUST_LOG=info
